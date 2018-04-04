@@ -15,13 +15,13 @@
     $4020-$FFFF	  $BFE0	Cartridge space: PRG ROM, PRG RAM, and mapper registers (See Note)
  */
 
-struct RAM{
+typedef struct RAM{
     uint8_t memory[0xFFFF];
 } RAM;
 
-uint8_t READ8(struct RAM *ram, uint16_t addr);
-uint16_t READ16(struct RAM *ram, uint16_t addr);
+uint8_t READ8(RAM *ram, uint16_t addr);
+uint16_t READ16(RAM *ram, uint16_t addr);
 
-void WRITE8(struct RAM *ram, uint16_t addr, uint8_t value);
-void WRITE16(struct RAM *ram, uint16_t addr, uint16_t value);
+void WRITE8(RAM *ram, uint16_t addr, uint8_t value);
+void WRITE16(RAM *ram, uint16_t addr, uint16_t value);
 #endif //NES_RAM_H

@@ -6,11 +6,11 @@
 #include "include/RAM.h"
 
 int main(int argc, char *argv[]){
-    struct CPU *cpu = malloc(sizeof *cpu);
-    struct ROM *rom = malloc(sizeof *rom);
-    struct RAM *ram = malloc(sizeof *ram);
+    CPU *cpu = malloc(sizeof *cpu);
+    ROM *rom = malloc(sizeof *rom);
+    RAM *ram = malloc(sizeof *ram);
 
-    rom->path = "/share/NES/ROMS/SMB.nes";
+    rom->path = "/share/NES/NESC/ROMS/SMB.nes";
     if(!load_rom(rom)){
         printf("ROM Loaded incorrectly.\n");
         return 0;

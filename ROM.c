@@ -4,7 +4,7 @@
 
 #include "include/ROM.h"
 
-int load_rom(struct ROM *rom){
+int load_rom(ROM *rom){
     FILE *fp;
     char* header = (char*) malloc(16* sizeof(char));
 
@@ -40,11 +40,11 @@ int load_rom(struct ROM *rom){
     return 1;
 }
 
-uint8_t ROM_READ8(struct ROM *rom, uint16_t addr){
+uint8_t ROM_READ8(ROM *rom, uint16_t addr){
     return rom->prg_rom[addr];
 }
 
-uint16_t ROM_READ16(struct ROM *rom, uint16_t addr){
+uint16_t ROM_READ16(ROM *rom, uint16_t addr){
     // This is reading 16 bit of the ROM, if we need to change big to little endian
     // Just need to swap high and low at the line before the return.
     uint16_t value;

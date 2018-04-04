@@ -3,7 +3,7 @@
 
 #include "include/CPU.h"
 
-void power_up(struct CPU *cpu){
+void power_up(CPU *cpu){
     /*
      * By the offical wiki:
      *  P = $34[1] (IRQ disabled) <= Status flag.
@@ -24,7 +24,7 @@ void power_up(struct CPU *cpu){
     WRITE16(cpu->ram, 0x4015, 0x00);
 }
 
-int cpu_step(struct CPU *cpu){
+int cpu_step(CPU *cpu){
     uint8_t op_code = ROM_READ8(cpu->rom, cpu->registers.pc);
     printf("0x%x\n",op_code);
     size_t increamentPC = 0;
@@ -111,12 +111,12 @@ int cpu_step(struct CPU *cpu){
     return 1;
 }
 
-void PUSH(struct CPU *cpu, uint8_t value){
+void PUSH(CPU *cpu, uint8_t value){
     cpu->ram->memory[0x100+cpu->registers.sp] = value;
     cpu->registers.sp++;
 }
 
-uint8_t POP(struct CPU *cpu){
+uint8_t POP(CPU *cpu){
     uint8_t value = cpu->ram->memory[0x100+cpu->registers.sp];
     cpu->registers.sp--;
     return value;

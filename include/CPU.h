@@ -9,7 +9,7 @@
 #include "RAM.h"
 #include "Addressing.h"
 
-struct CPU {
+typedef struct CPU {
     struct registers{
         uint16_t pc; // Program Counter.
         uint8_t sp; // Stack counter.
@@ -18,13 +18,13 @@ struct CPU {
         uint8_t y; // Index Register Y.
         uint8_t status; // The status flag.
     } registers;
-    struct ROM *rom;
-    struct RAM *ram;
+    ROM *rom;
+    RAM *ram;
 } CPU;
 
-void power_up(struct CPU *cpu);
-int cpu_step(struct CPU *cpu);
+void power_up(CPU *cpu);
+int cpu_step(CPU *cpu);
 
-void PUSH(struct CPU *cpu, uint8_t value);
-uint8_t POP(struct CPU *cpu);
+void PUSH(CPU *cpu, uint8_t value);
+uint8_t POP(CPU *cpu);
 #endif //NES_CPU_H
