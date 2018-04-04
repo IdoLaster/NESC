@@ -48,3 +48,17 @@ fabric.properties
 
 # Editor-based Rest Client
 .idea/httpRequests
+
+# Other clion crap
+.idea/.name
+.idea/codeStyles/*
+.idea/misc.xml
+.idea/modules.xml
+.idea/NES.iml
+.idea/vcs.xml
+CMakeLists.txt
+
+# Other Genral stuff
+ROMS/*
+main
+Makefile
