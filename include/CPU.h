@@ -25,6 +25,7 @@ typedef struct CPU {
 void power_up(CPU *cpu);
 int cpu_step(CPU *cpu);
 
-void PUSH(CPU *cpu, uint8_t value);
+void PUSH8(CPU *cpu, uint8_t value);
+void PUSH16(CPU *cpu, uint16_t value);
 uint8_t POP(CPU *cpu);
 #endif //NES_CPU_H
