@@ -6,8 +6,7 @@
 
 int load_rom(ROM *rom){
     FILE *fp;
-    char* header = (char*) malloc(16* sizeof(char));
-
+    char* header = (char*) malloc(16);
     fp = fopen(rom->path, "rb");
 
     // Validating the file.
@@ -16,8 +15,7 @@ int load_rom(ROM *rom){
         return 0;
     }
     // Reading the header(first 16 bytes).
-    fread(header, 1, sizeof(header), fp);
-
+    fread(header, 1, 16, fp);
     if (memcmp(header, "NES\x1A", 4)) {
         printf("Not a valid iNES ROM image!\n");
         return 0;
