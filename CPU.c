@@ -130,10 +130,22 @@ int cpu_step(CPU *cpu){
             // Addressing mode: Zero Page.
             if(cpu->registers.x == 0){
                 cpu->registers.status = cpu->registers.status | 0b10;
+            }else{
+                cpu->registers.status = cpu->registers.status & 0b11111101;
             }
             operand = READ8_ZP(cpu->ram, cpu->registers.pc + 1);
             WRITE8(cpu->ram, operand,cpu->registers.x);
             increamentPC+=2;
+            break;
+        case 0x90:;
+            // BCC - Branch if carry
+            operand = READ8_ABS(cpu->ram, cpu->registers.pc + 1);
+            if(!(cpu->registers.status & 0b1)){
+                increamentPC += operand;
+                printf("BRANCHING(0x%x)\n", operand);
+            }
+            increamentPC+= 2;
+            break;
             break;
         case 0xA2:;
             // LDX - Loads a value to x
@@ -141,9 +153,24 @@ int cpu_step(CPU *cpu){
             operand = READ8(cpu->ram, cpu->registers.pc + 1);
             if(operand == 0){
                 cpu->registers.status = cpu->registers.status | 0b10;
+            }else{
+                cpu->registers.status = cpu->registers.status & 0b11111101;
             }
             cpu->registers.x = operand;
             increamentPC+=2;
+            break;
+        case 0xA9:;
+            // LDA - Loads a value to A.
+            // Addressing mode: Immediate.
+            operand = READ8(cpu->ram, cpu->registers.pc + 1);
+            if(operand == 0){
+                cpu->registers.status = cpu->registers.status | 0b10;
+            }else{
+                cpu->registers.status = cpu->registers.status & 0b11111101;
+            }
+            cpu->registers.a = operand;
+            increamentPC+=2;
+            break;
             break;
         case 0xB0:;
             // BCS - Branch on Carry Set, it's jumping if the carry is set.
@@ -151,6 +178,7 @@ int cpu_step(CPU *cpu){
             operand = READ8_ABS(cpu->ram, cpu->registers.pc + 1);
             if(cpu->registers.status & 0b1){
                 increamentPC += operand;
+                printf("BRANCHING\n");
             }
             increamentPC+= 2;
             break;
@@ -169,6 +197,17 @@ int cpu_step(CPU *cpu){
         case 0xEA:;
             // Other NOP instuction, does N-O-T-H-I-N-G.
             increamentPC++;
+            break;
+        case 0xF0:;
+            // BEQ - Branch if equal, or if the zero flag is set.
+            // Addressing mode: Immediate I think.
+            operand = READ8_ABS(cpu->ram, cpu->registers.pc + 1);
+            if(cpu->registers.status & 0b10){
+                increamentPC += operand;
+                printf("BRANCHING(0x%x)\n", operand);
+            }
+            increamentPC+= 2;
+            break;
             break;
         default:
             printf("Unimplemented opcode: 0x%x\n", op_code);
