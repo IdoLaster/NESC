@@ -27,7 +27,8 @@ void power_up(CPU *cpu){
         $8000	$4000	PRG-ROM
         $C000	$4000	PRG-ROM
      */
-    cpu->registers.status = 0x34;
+    //TODO: Change back the status flag after done with nestest.
+    cpu->registers.status = 0x24;
     cpu->registers.a = 0;
     cpu->registers.x = 0;
     cpu->registers.y = 0;
@@ -89,6 +90,11 @@ int cpu_step(CPU *cpu){
             cpu->registers.a | or_with;
             increamentPC+=3;
             break;
+        case 0x18:;
+            // CLC - Clear carry flag.
+            cpu->registers.status = cpu->registers.status & 0b11111110;
+            increamentPC++;
+            break;
         case 0x20:;
             // TODO: Implement JSR: I think i've implemented this, I am not sure if the address I am jumping to
             // TODO: is correct.
@@ -97,6 +103,11 @@ int cpu_step(CPU *cpu){
             PUSH16(cpu, cpu->registers.pc+4);
             uint16_t operand = READ16_ABS(cpu->ram, (cpu->registers.pc + 1));
             cpu->registers.pc = operand;
+            break;
+        case 0x38:;
+            //SEC - SEt carry, setting the carry flag enable.
+            cpu->registers.status = cpu->registers.status | 0b1;
+            increamentPC++;
             break;
         case 0x4C:;
             // JMP - jumps to given address.
@@ -117,6 +128,9 @@ int cpu_step(CPU *cpu){
         case 0x86:;
             // STX - Stores the A register to given address.
             // Addressing mode: Zero Page.
+            if(cpu->registers.x == 0){
+                cpu->registers.status = cpu->registers.status | 0b10;
+            }
             operand = READ8_ZP(cpu->ram, cpu->registers.pc + 1);
             WRITE8(cpu->ram, operand,cpu->registers.x);
             increamentPC+=2;
@@ -125,8 +139,20 @@ int cpu_step(CPU *cpu){
             // LDX - Loads a value to x
             // Addressing mode: Immediate.
             operand = READ8(cpu->ram, cpu->registers.pc + 1);
+            if(operand == 0){
+                cpu->registers.status = cpu->registers.status | 0b10;
+            }
             cpu->registers.x = operand;
             increamentPC+=2;
+            break;
+        case 0xB0:;
+            // BCS - Branch on Carry Set, it's jumping if the carry is set.
+            // Addressing mode: Immediate (I belive).
+            operand = READ8_ABS(cpu->ram, cpu->registers.pc + 1);
+            if(cpu->registers.status & 0b1){
+                increamentPC += operand;
+            }
+            increamentPC+= 2;
             break;
         case 0xC0:;
             // CPY - Compare with Y, this one is immidate addressing mode.
@@ -139,6 +165,10 @@ int cpu_step(CPU *cpu){
                 cpu->registers.status |=0b00000001;
             }
             increamentPC += 2;
+            break;
+        case 0xEA:;
+            // Other NOP instuction, does N-O-T-H-I-N-G.
+            increamentPC++;
             break;
         default:
             printf("Unimplemented opcode: 0x%x\n", op_code);
