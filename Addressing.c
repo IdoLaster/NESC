@@ -1,12 +1,15 @@
 #include "include/Addressing.h"
 
-uint8_t READ8_ZP(RAM *ram, uint16_t addr){
+uint8_t READ8_ZP(RAM *ram, uint8_t addr){
     // This is for the Zero-page Addressing mode, The zero page is the first 256 bytes of the RAM.
     // So when we refer to Zero-page addressing, we get the address of the ram from the rom and the value
     // Sitting there.
     return ram->memory[addr];
 }
 
+void WRITE8_ZP(RAM *ram, uint8_t addr, uint8_t value){
+    ram->memory[addr] = value;
+}
 uint8_t READ8_ABS(RAM *ram, uint16_t addr){
     return ram->memory[addr];
 }
