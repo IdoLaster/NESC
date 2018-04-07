@@ -104,6 +104,24 @@ int cpu_step(CPU *cpu){
             uint16_t operand = READ16_ABS(cpu->ram, (cpu->registers.pc + 1));
             cpu->registers.pc = operand;
             break;
+        case 0x24:;
+            // BIT - Bit Test
+            // This instructions is used to test if one or more bits are set in a target memory location.
+            // The mask pattern in A is ANDed with the value in memory to set or clear the zero flag,
+            // but the result is not kept. Bits 7 and 6 of the value from memory are copied into the N and V flags.
+            operand = READ8_ZP(cpu->ram,READ8(cpu->ram, cpu->registers.pc+1));
+            FIXZERO(cpu->registers.a & operand, cpu->registers.status);
+            if(CHECK_BIT(operand,6)){
+                SETOVERFLOW(cpu->registers.status);
+            }else {
+                CLEAROVERFLOW(cpu->registers.status);
+            }if(CHECK_BIT(operand,7)){
+                SETNEGATIVE(cpu->registers.status);
+            }else{
+                 CLEARNEGATIVE(cpu->registers.status);
+            }
+            increamentPC+=2;
+            break;
         case 0x38:;
             //SEC - SEt carry, setting the carry flag enable.
             cpu->registers.status = cpu->registers.status | 0b1;
@@ -116,19 +134,16 @@ int cpu_step(CPU *cpu){
             printf("JUMPING TO: 0x%x\n", operand);
             cpu->registers.pc = operand;
             break;
-        case 0x70:;
-            // TODO: Implement BVS:
-            // Branch on oVerflow  Set
-            // Currently I know it's taking a operand which is think it's the label it's going to jump to.
-            // So we will read it from rom too.
-            operand = ROM_READ8(cpu->rom, (cpu->registers.pc) + 1);
-            // Since it's 2 byte instuction, we need to increment PC by one more.
-            increamentPC++;
+        case 0x85:;
+            // STA - Stores the a register at a given address.
+            // Addressing mode: Zero-page
+            operand = READ8(cpu->ram, cpu->registers.pc+1);
+            WRITE8_ZP(cpu->ram, operand, cpu->registers.a);
+            increamentPC+=2;
             break;
         case 0x86:;
             // STX - Stores the A register to given address.
             // Addressing mode: Zero Page.
-            FIXZERO(cpu->registers.x, cpu->registers.status);
             operand = READ8_ZP(cpu->ram, cpu->registers.pc + 1);
             WRITE8(cpu->ram, operand,cpu->registers.x);
             increamentPC+=2;
@@ -148,6 +163,7 @@ int cpu_step(CPU *cpu){
             // Addressing mode: Immediate.
             operand = READ8(cpu->ram, cpu->registers.pc + 1);
             FIXZERO(operand, cpu->registers.status);
+            FIXNEGATIVE(operand, cpu->registers.status);
             cpu->registers.x = operand;
             increamentPC+=2;
             break;
@@ -156,7 +172,9 @@ int cpu_step(CPU *cpu){
             // Addressing mode: Immediate.
             operand = READ8(cpu->ram, cpu->registers.pc + 1);
             FIXZERO(operand, cpu->registers.status);
+            FIXNEGATIVE(operand, cpu->registers.status);
             cpu->registers.a = operand;
+
             increamentPC+=2;
             break;
             break;
@@ -166,7 +184,7 @@ int cpu_step(CPU *cpu){
             operand = READ8_ABS(cpu->ram, cpu->registers.pc + 1);
             if(cpu->registers.status & 0b1){
                 increamentPC += operand;
-                printf("BRANCHING\n");
+                printf("BRANCHING(0x%x)\n", operand);
             }
             increamentPC+= 2;
             break;
@@ -187,7 +205,7 @@ int cpu_step(CPU *cpu){
             if(!ZEROSET(cpu->registers.status)){
                 operand = READ8_ABS(cpu->ram, cpu->registers.pc + 1);
                 increamentPC += operand;
-                printf("BRANCHING\n");
+                printf("BRANCHING(0x%x)\n", operand);
             }
             increamentPC += 2;
             break;
