@@ -4,6 +4,17 @@
 #ifndef NES_CPU_H
 #define NES_CPU_H
 
+#define CHECK_BIT(var,pos) ((var) & (1<<(pos)))
+
+#define ZEROSET(flag) CHECK_BIT(flag,0)
+#define CARRYSET(flag) CHECK_BIT(flag,1)
+#define INTERRUPTDISABLE(flag) CHECK_BIT(flag,2)
+#define DECIMALMODESET(flag) CHECK_BIT(flag,3)
+#define OVERFLOWSET(flag) CHECK_BIT(flag,6)
+#define NEGATIVESET(flag) CHECK_BIT(flag,7)
+
+#define FIXZERO(val, flag) {if(val==0){flag=flag|0b10;}else{flag=flag&0b11111101;}}
+
 #include <stdint.h>
 #include "ROM.h"
 #include "RAM.h"
@@ -27,5 +38,6 @@ int cpu_step(CPU *cpu);
 
 void PUSH8(CPU *cpu, uint8_t value);
 void PUSH16(CPU *cpu, uint16_t value);
+
 uint8_t POP(CPU *cpu);
 #endif //NES_CPU_H
