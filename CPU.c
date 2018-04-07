@@ -128,11 +128,7 @@ int cpu_step(CPU *cpu){
         case 0x86:;
             // STX - Stores the A register to given address.
             // Addressing mode: Zero Page.
-            if(cpu->registers.x == 0){
-                cpu->registers.status = cpu->registers.status | 0b10;
-            }else{
-                cpu->registers.status = cpu->registers.status & 0b11111101;
-            }
+            FIXZERO(cpu->registers.x, cpu->registers.status);
             operand = READ8_ZP(cpu->ram, cpu->registers.pc + 1);
             WRITE8(cpu->ram, operand,cpu->registers.x);
             increamentPC+=2;
@@ -151,11 +147,7 @@ int cpu_step(CPU *cpu){
             // LDX - Loads a value to x
             // Addressing mode: Immediate.
             operand = READ8(cpu->ram, cpu->registers.pc + 1);
-            if(operand == 0){
-                cpu->registers.status = cpu->registers.status | 0b10;
-            }else{
-                cpu->registers.status = cpu->registers.status & 0b11111101;
-            }
+            FIXZERO(operand, cpu->registers.status);
             cpu->registers.x = operand;
             increamentPC+=2;
             break;
@@ -163,11 +155,7 @@ int cpu_step(CPU *cpu){
             // LDA - Loads a value to A.
             // Addressing mode: Immediate.
             operand = READ8(cpu->ram, cpu->registers.pc + 1);
-            if(operand == 0){
-                cpu->registers.status = cpu->registers.status | 0b10;
-            }else{
-                cpu->registers.status = cpu->registers.status & 0b11111101;
-            }
+            FIXZERO(operand, cpu->registers.status);
             cpu->registers.a = operand;
             increamentPC+=2;
             break;
@@ -191,6 +179,15 @@ int cpu_step(CPU *cpu){
                 cpu->registers.status |=0b00000011;
             }else if(cpu->registers.y > operand){
                 cpu->registers.status |=0b00000001;
+            }
+            increamentPC += 2;
+            break;
+        case 0xD0:;
+            // BNE - Branch if not equal, branchs if the zero flag is clear.
+            if(!ZEROSET(cpu->registers.status)){
+                operand = READ8_ABS(cpu->ram, cpu->registers.pc + 1);
+                increamentPC += operand;
+                printf("BRANCHING\n");
             }
             increamentPC += 2;
             break;
