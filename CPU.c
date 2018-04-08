@@ -121,6 +121,14 @@ int cpu_step(CPU *cpu){
             }
             increamentPC+=2;
             break;
+        case 0x29:;
+            // AND - Preforms a bitwise AND with a and the operand
+            // Addressing mode: Immediate.
+            operand = READ8(cpu->ram,cpu->registers.pc+1);
+            cpu->registers.a &= operand;
+            FIXFLAGS(cpu->registers.a, cpu->registers.status);
+            increamentPC+=2;
+            break;
         case 0x38:;
             //SEC - SEt carry, setting the carry flag enable.
             cpu->registers.status = cpu->registers.status | 0b1;
@@ -235,6 +243,19 @@ int cpu_step(CPU *cpu){
             }
             increamentPC += 2;
             break;
+        case 0xC9:;
+            // CMP - Compares the contents of the a register with the operand and turns on/off flags accordingly
+            // Addressing mode Immediate.
+            operand = READ8(cpu->ram, cpu->registers.pc+1);
+            if(cpu->registers.a > operand){
+                SETCARRY(cpu->registers.status);
+            }else if(cpu->registers.a == operand){
+                SETZERO(cpu->registers.status);
+            }else{
+                SETNEGATIVE(cpu->registers.status);
+            }
+            increamentPC+=2;
+            break;
         case 0xD0:;
             // BNE - Branch if not equal, branchs if the zero flag is clear.
             if(!ZEROSET(cpu->registers.status)){
@@ -243,6 +264,11 @@ int cpu_step(CPU *cpu){
                 printf("BRANCHING(0x%x)\n", operand);
             }
             increamentPC += 2;
+            break;
+        case 0xD8:;
+            // CLD - Clear decimal mode.
+            CLEARDECIMALMODE(cpu->registers.status);
+            increamentPC++;
             break;
         case 0xEA:;
             // Other NOP instuction, does N-O-T-H-I-N-G.
