@@ -33,6 +33,8 @@
 #define CLEARCARRY(flag) CLEAR_BIT(flag, 0)
 
 #define FIXNEGATIVE(val, flag) {if(CHECK_BIT(val,7)){SETNEGATIVE(flag);}else{CLEARNEGATIVE(flag);}}
+#define FIXFLAGS(val, flag) {FIXNEGATIVE(val,flag);FIXZERO(val, flag)}
+
 #include <stdint.h>
 #include "ROM.h"
 #include "RAM.h"
@@ -57,5 +59,6 @@ int cpu_step(CPU *cpu);
 void PUSH8(CPU *cpu, uint8_t value);
 void PUSH16(CPU *cpu, uint16_t value);
 
-uint8_t POP(CPU *cpu);
+uint8_t POP8(CPU *cpu);
+uint16_t POP16(CPU *cpu);
 #endif //NES_CPU_H
