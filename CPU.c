@@ -44,19 +44,10 @@ void power_up(CPU *cpu){
 
 int cpu_step(CPU *cpu){
     uint8_t op_code = READ8(cpu->ram, cpu->registers.pc);
+    uint16_t operand;
     printf("0x%x\n",op_code);
     size_t increamentPC = 0;
     switch(op_code){
-        case 0:;
-            //BRK
-            // TODO: Understand and implement br(ea)k.
-            // According to nesdev.com the brk opcode is 2 byte long, so we need to increase PC by one more.
-            PUSH8(cpu, (uint8_t) cpu->registers.pc >> 8);
-            PUSH8(cpu, (uint8_t) cpu->registers.pc & 0xFF);
-            PUSH8(cpu, cpu->registers.status);
-            cpu->registers.status |= 0b100;
-            increamentPC++;
-            break;
         case 0x03:;
             // SLO instruction, preforms a ASL (Shift left) And then OR with A.
             break;
@@ -79,6 +70,16 @@ int cpu_step(CPU *cpu){
             PUSH8(cpu, cpu->registers.status);
             increamentPC++;
             break;
+        case 0x10:;
+            // BPL - Branch if positive, branching if the negative flag is clear.
+            // Addressing mode: Relative.
+            operand = READ8(cpu->ram, cpu->registers.pc+1);
+            if(!NEGATIVESET(cpu->registers.status)){
+                increamentPC+=operand;
+            }
+            increamentPC+=2;
+            break;
+            break;
         case 0x0C:;
             // NOP - No OPeration, doing nothing.
             increamentPC++;
@@ -96,12 +97,10 @@ int cpu_step(CPU *cpu){
             increamentPC++;
             break;
         case 0x20:;
-            // TODO: Implement JSR: I think i've implemented this, I am not sure if the address I am jumping to
-            // TODO: is correct.
             // JSR stands for Jump to Subroutine;
-            // JSR Takes 2 byte operand, so we are going to read them too.
-            PUSH16(cpu, cpu->registers.pc+4);
-            uint16_t operand = READ16_ABS(cpu->ram, (cpu->registers.pc + 1));
+            // Pushs the pc+3 to the stack and then jumping to the given operand.
+            PUSH16(cpu, cpu->registers.pc+3);
+            operand = READ16_ABS(cpu->ram, (cpu->registers.pc + 1));
             cpu->registers.pc = operand;
             break;
         case 0x24:;
@@ -133,6 +132,42 @@ int cpu_step(CPU *cpu){
             operand = READ16_ABS(cpu->ram, (cpu->registers.pc + 1));
             printf("JUMPING TO: 0x%x\n", operand);
             cpu->registers.pc = operand;
+            break;
+        case 0x50:;
+            // BVC - Branch if overflow is clear.
+            // Addressing mode: Relative.
+            operand = READ8(cpu->ram, cpu->registers.pc+1);
+            if(!OVERFLOWSET(cpu->registers.status)){
+                increamentPC+=operand;
+            }
+            increamentPC+=2;
+            break;
+        case 0x60:;
+            // RTS - Return from subroutine
+            uint16_t return_to = POP16(cpu);
+            printf("RETURNING TO: 0x%x\n", return_to);
+            cpu->registers.pc = return_to;
+            break;
+        case 0x68:;
+            // PLA - Pull an 8bit value from the stack to the A register.
+            uint8_t flags = POP8(cpu);
+            cpu->registers.a = flags;
+            FIXFLAGS(cpu->registers.a, cpu->registers.status);
+            increamentPC++;
+            break;
+        case 0x70:;
+            // BVS - Branch if overflow is set
+            // Addressing mode: Relative.
+            operand = READ8(cpu->ram, cpu->registers.pc+1);
+            if(OVERFLOWSET(cpu->registers.status)){
+                increamentPC+=operand;
+            }
+            increamentPC+=2;
+            break;
+        case 0x78:;
+            // SEI - Set intrerrupt Disable.
+            SETINTERRUPTDISABLE(cpu->registers.status);
+            increamentPC+=1;
             break;
         case 0x85:;
             // STA - Stores the a register at a given address.
@@ -223,6 +258,10 @@ int cpu_step(CPU *cpu){
             }
             increamentPC+= 2;
             break;
+        case 0xF8:;
+            // SED - Set Decimal flag.
+            SETDECIMALMODE(cpu->registers.status);
+            increamentPC+=1;
             break;
         default:
             printf("Unimplemented opcode: 0x%x\n", op_code);
@@ -233,17 +272,26 @@ int cpu_step(CPU *cpu){
 }
 
 void PUSH8(CPU *cpu, uint8_t value){
+    //printf("PUSHING: 0x%x TO: 0x%x\n", value, 0x100+cpu->registers.sp);
     cpu->ram->memory[0x100+cpu->registers.sp] = value;
     cpu->registers.sp++;
 }
 
 void PUSH16(CPU *cpu, uint16_t value){
-    PUSH8(cpu, (uint8_t) value >> 8);
-    PUSH8(cpu, (uint8_t) value & 0xFF);
+    uint8_t lower = value & 0xFF;
+    uint8_t higher = value >> 8;
+    PUSH8(cpu, lower);
+    PUSH8(cpu, higher);
 }
 
-uint8_t POP(CPU *cpu){
-    uint8_t value = cpu->ram->memory[0x100+cpu->registers.sp];
+uint8_t POP8(CPU *cpu){
     cpu->registers.sp--;
+    uint8_t value = cpu->ram->memory[0x100+cpu->registers.sp];
     return value;
+}
+
+uint16_t POP16(CPU *cpu){
+    uint8_t higher = POP8(cpu);
+    uint8_t lower = POP8(cpu);
+    return (higher << 8) | (lower & 0xff);
 }
