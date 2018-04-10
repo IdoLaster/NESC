@@ -16,8 +16,6 @@
 #define OVERFLOWSET(flag) CHECK_BIT(flag,6)
 #define NEGATIVESET(flag) CHECK_BIT(flag,7)
 
-#define FIXZERO(val, flag) {if(val==0){flag=flag|0b10;}else{flag=flag&0b11111101;}}
-
 #define SETOVERFLOW(flag) SET_BIT(flag, 6)
 #define SETNEGATIVE(flag) SET_BIT(flag, 7)
 #define SETDECIMALMODE(flag) SET_BIT(flag, 3)
@@ -33,6 +31,7 @@
 #define CLEARCARRY(flag) CLEAR_BIT(flag, 0)
 
 #define FIXNEGATIVE(val, flag) {if(CHECK_BIT(val,7)){SETNEGATIVE(flag);}else{CLEARNEGATIVE(flag);}}
+#define FIXZERO(val, flag) {if(val==0){SETZERO(flag);}else{CLEARZERO(flag);}}
 #define FIXFLAGS(val, flag) {FIXNEGATIVE(val,flag);FIXZERO(val, flag)}
 
 #include <stdint.h>
