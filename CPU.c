@@ -67,8 +67,18 @@ int cpu_step(CPU *cpu){
         case 0x08:;
             // PHP:
             // Pushing prossecor status flag.
+            //TODO: Check if turnign on bits 4 and 5 is needed.
+            //cpu->registers.status |= (1 << 4);
+            //cpu->registers.status |= (1 << 5);
             PUSH8(cpu, cpu->registers.status);
             increamentPC++;
+            break;
+        case 0x09:;
+            // ORA - Ors the opearnd with a.
+            operand = READ8(cpu->ram, cpu->registers.pc+1);
+            cpu->registers.a |= operand;
+            FIXFLAGS(cpu->registers.a, cpu->registers.status);
+            increamentPC+=2;
             break;
         case 0x10:;
             // BPL - Branch if positive, branching if the negative flag is clear.
@@ -109,7 +119,8 @@ int cpu_step(CPU *cpu){
             // The mask pattern in A is ANDed with the value in memory to set or clear the zero flag,
             // but the result is not kept. Bits 7 and 6 of the value from memory are copied into the N and V flags.
             operand = READ8_ZP(cpu->ram,READ8(cpu->ram, cpu->registers.pc+1));
-            FIXZERO(cpu->registers.a & operand, cpu->registers.status);
+            value = cpu->registers.a & operand;
+            FIXFLAGS(value, cpu->registers.status);
             if(CHECK_BIT(operand,6)){
                 SETOVERFLOW(cpu->registers.status);
             }else {
@@ -121,6 +132,23 @@ int cpu_step(CPU *cpu){
             }
             increamentPC+=2;
             break;
+        case 0x28:;
+            // PLP - Pull a value from the stack to the status register.
+            // The wiki says we should ignore bit 4 and 5
+            uint8_t status_register = POP8(cpu);
+            for (int i = 0; i < 7; ++i) {
+                if(i == 4 || i ==5){
+                    continue;
+                }
+                if(CHECK_BIT(status_register, i)){
+                    printf("SETTINNG BIT 0x%x of the status\n", i);
+                    SET_BIT(cpu->registers.status, i);
+                }else{
+                    CLEAR_BIT(cpu->registers.status, i);
+                }
+            }
+            increamentPC++;
+            break;
         case 0x29:;
             // AND - Preforms a bitwise AND with a and the operand
             // Addressing mode: Immediate.
@@ -129,9 +157,23 @@ int cpu_step(CPU *cpu){
             FIXFLAGS(cpu->registers.a, cpu->registers.status);
             increamentPC+=2;
             break;
+        case 0x30:;
+            // BMI - Branch if minues - branchs if the negative flag is set.
+            // Addressing mode: Relative
+            operand = READ8(cpu->ram, cpu->registers.pc+1);
+            if(NEGATIVESET(cpu->registers.status)){
+                increamentPC+=operand;
+            }
+            increamentPC+=2;
+            break;
         case 0x38:;
             //SEC - SEt carry, setting the carry flag enable.
             cpu->registers.status = cpu->registers.status | 0b1;
+            increamentPC++;
+            break;
+        case 0x48:;
+            // PHA - Push the A register
+            PUSH8(cpu, cpu->registers.a);
             increamentPC++;
             break;
         case 0x4C:;
@@ -247,12 +289,19 @@ int cpu_step(CPU *cpu){
             // CMP - Compares the contents of the a register with the operand and turns on/off flags accordingly
             // Addressing mode Immediate.
             operand = READ8(cpu->ram, cpu->registers.pc+1);
-            if(cpu->registers.a > operand){
+            if(cpu->registers.a >= operand){
                 SETCARRY(cpu->registers.status);
-            }else if(cpu->registers.a == operand){
+            }
+            if(cpu->registers.a == operand){
                 SETZERO(cpu->registers.status);
             }else{
+                CLEARZERO(cpu->registers.status);
+            }
+            if(cpu->registers.a < operand)
+            {
                 SETNEGATIVE(cpu->registers.status);
+            }else{
+                CLEARNEGATIVE(cpu->registers.status);
             }
             increamentPC+=2;
             break;
