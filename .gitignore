@@ -63,3 +63,4 @@ ROMS/*
 main
 Makefile
 log
+log.py
