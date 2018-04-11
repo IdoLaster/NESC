@@ -68,9 +68,10 @@ int cpu_step(CPU *cpu){
             // PHP:
             // Pushing prossecor status flag.
             //TODO: Check if turnign on bits 4 and 5 is needed.
-            //cpu->registers.status |= (1 << 4);
-            //cpu->registers.status |= (1 << 5);
-            PUSH8(cpu, cpu->registers.status);
+            value = cpu->registers.status;
+            value |= (1 << 4);
+            value |= (1 << 5);
+            PUSH8(cpu, value);
             increamentPC++;
             break;
         case 0x09:;
@@ -141,7 +142,6 @@ int cpu_step(CPU *cpu){
                     continue;
                 }
                 if(CHECK_BIT(status_register, i)){
-                    printf("SETTINNG BIT 0x%x of the status\n", i);
                     SET_BIT(cpu->registers.status, i);
                 }else{
                     CLEAR_BIT(cpu->registers.status, i);
@@ -176,6 +176,14 @@ int cpu_step(CPU *cpu){
             PUSH8(cpu, cpu->registers.a);
             increamentPC++;
             break;
+        case 0x49:;
+            // EOR - Exclusive or with A and the operand.
+            // Addressing mode: Immediate
+            operand = READ8(cpu->ram, cpu->registers.pc+1);
+            cpu->registers.a ^= operand;
+            FIXFLAGS(cpu->registers.a, cpu->registers.status);
+            increamentPC+=2;
+            break;
         case 0x4C:;
             // JMP - jumps to given address.
             // Addressing mode: Abs.
@@ -205,6 +213,25 @@ int cpu_step(CPU *cpu){
             FIXFLAGS(cpu->registers.a, cpu->registers.status);
             increamentPC++;
             break;
+        case 0x69:;
+            // ADC - Add with carry
+            // Addressing mode: Immediate.
+            operand = READ8(cpu->ram, cpu->registers.pc+1);
+            value = cpu->registers.a + CARRYSET(cpu->registers.status) + operand;
+            cpu->registers.a = value;
+            FIXFLAGS(cpu->registers.a, cpu->registers.status);
+            uint8_t overflow = ((cpu->registers.a ^ value) & (operand ^ value) & 0x80);
+            if(overflow){
+                SETOVERFLOW(cpu->registers.status);
+            }else{
+                CLEAROVERFLOW(cpu->registers.status);
+            }
+            if(value & 256){
+                SETCARRY(cpu->registers.status);
+            }else{
+                CLEARCARRY(cpu->registers.status);
+            }
+            increamentPC+=2;
         case 0x70:;
             // BVS - Branch if overflow is set
             // Addressing mode: Relative.
@@ -272,6 +299,11 @@ int cpu_step(CPU *cpu){
                 printf("BRANCHING(0x%x)\n", operand);
             }
             increamentPC+= 2;
+            break;
+        case 0xB8:;
+            // CLV - Clear overflow flag.
+            CLEAROVERFLOW(cpu->registers.status);
+            increamentPC++;
             break;
         case 0xC0:;
             // CPY - Compare with Y, this one is immidate addressing mode.
