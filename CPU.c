@@ -272,6 +272,14 @@ int cpu_step(CPU *cpu){
             increamentPC+= 2;
             break;
             break;
+        case 0xA0:;
+            // LDY - Loads a value to Y
+            // Addressing mode: Immediate.
+            operand = READ8(cpu->ram, cpu->registers.pc + 1);
+            cpu->registers.y = operand;
+            FIXFLAGS(cpu->registers.y, cpu->registers.status);
+            increamentPC+=2;
+            break;
         case 0xA2:;
             // LDX - Loads a value to x
             // Addressing mode: Immediate.
@@ -306,15 +314,19 @@ int cpu_step(CPU *cpu){
             break;
         case 0xC0:;
             // CPY - Compare with Y, this one is immidate addressing mode.
-            operand = ROM_READ8(cpu->rom, (cpu->registers.pc) + 1);
-            if(cpu->registers.y < operand){
-                cpu->registers.status |= 0b10000000;
-            }else if(cpu->registers.y == operand){
-                cpu->registers.status |=0b00000011;
-            }else if(cpu->registers.y > operand){
-                cpu->registers.status |=0b00000001;
+            operand = READ8(cpu->ram, cpu->registers.pc+1);
+            if(cpu->registers.y >= operand){
+                SETCARRY(cpu->registers.status);
+            }else{
+                CLEARCARRY(cpu->registers.status);
             }
-            increamentPC += 2;
+            if(cpu->registers.y == operand){
+                SETZERO(cpu->registers.status);
+            }else{
+                CLEARZERO(cpu->registers.status);
+            }
+            FIXNEGATIVE(cpu->registers.y - operand, cpu->registers.status);
+            increamentPC+=2;
             break;
         case 0xC9:;
             // CMP - Compares the contents of the a register with the operand and turns on/off flags accordingly
@@ -346,6 +358,43 @@ int cpu_step(CPU *cpu){
             // CLD - Clear decimal mode.
             CLEARDECIMALMODE(cpu->registers.status);
             increamentPC++;
+            break;
+        case 0xE0:;
+            // CPX - Compares the contents of the x register with the operand and turns on/off flags accordingly
+            // Addressing mode Immediate.
+            operand = READ8(cpu->ram, cpu->registers.pc+1);
+            if(cpu->registers.x >= operand){
+                SETCARRY(cpu->registers.status);
+            }else{
+                CLEARCARRY(cpu->registers.status);
+            }
+            if(cpu->registers.x == operand){
+                SETZERO(cpu->registers.status);
+            }else{
+                CLEARZERO(cpu->registers.status);
+            }
+            FIXNEGATIVE(cpu->registers.x - operand, cpu->registers.status);
+            increamentPC+=2;
+            break;
+        case 0xE9:;
+            // SBC - Substract with carry.
+            operand = READ8(cpu->ram, cpu->registers.pc+1) ^ 0xFF;
+            sum = cpu->registers.a + operand + CARRYSET(cpu->registers.status);
+            overflow = (cpu->registers.a ^ sum) & (operand ^ sum) & 0x80;
+            if(overflow){
+                SETOVERFLOW(cpu->registers.status);
+            }else{
+                CLEAROVERFLOW(cpu->registers.status);
+            }
+            if(sum > 255){
+                SETCARRY(cpu->registers.status);
+            }else{
+                CLEARCARRY(cpu->registers.status);
+            }
+            cpu->registers.a = sum & 0xFF;
+            FIXFLAGS(cpu->registers.a, cpu->registers.status);
+            increamentPC+=2;
+            break;
             break;
         case 0xEA:;
             // Other NOP instuction, does N-O-T-H-I-N-G.
