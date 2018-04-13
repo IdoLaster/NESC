@@ -45,6 +45,7 @@ void power_up(CPU *cpu){
 int cpu_step(CPU *cpu){
     uint8_t op_code = READ8(cpu->ram, cpu->registers.pc);
     uint16_t operand;
+    uint16_t value = 0;
     printf("0x%x\n",op_code);
     size_t increamentPC = 0;
     switch(op_code){
@@ -217,21 +218,22 @@ int cpu_step(CPU *cpu){
             // ADC - Add with carry
             // Addressing mode: Immediate.
             operand = READ8(cpu->ram, cpu->registers.pc+1);
-            value = cpu->registers.a + CARRYSET(cpu->registers.status) + operand;
-            cpu->registers.a = value;
-            FIXFLAGS(cpu->registers.a, cpu->registers.status);
-            uint8_t overflow = ((cpu->registers.a ^ value) & (operand ^ value) & 0x80);
+            uint16_t sum = cpu->registers.a + operand + CARRYSET(cpu->registers.status);
+            uint8_t overflow = (cpu->registers.a ^ sum) & (operand ^ sum) & 0x80;
             if(overflow){
                 SETOVERFLOW(cpu->registers.status);
             }else{
                 CLEAROVERFLOW(cpu->registers.status);
             }
-            if(value & 256){
+            if(sum > 255){
                 SETCARRY(cpu->registers.status);
             }else{
                 CLEARCARRY(cpu->registers.status);
             }
+            cpu->registers.a = sum & 0xFF;
+            FIXFLAGS(cpu->registers.a, cpu->registers.status);
             increamentPC+=2;
+            break;
         case 0x70:;
             // BVS - Branch if overflow is set
             // Addressing mode: Relative.
@@ -283,12 +285,9 @@ int cpu_step(CPU *cpu){
             // LDA - Loads a value to A.
             // Addressing mode: Immediate.
             operand = READ8(cpu->ram, cpu->registers.pc + 1);
-            FIXZERO(operand, cpu->registers.status);
-            FIXNEGATIVE(operand, cpu->registers.status);
             cpu->registers.a = operand;
-
+            FIXFLAGS(cpu->registers.a, cpu->registers.status);
             increamentPC+=2;
-            break;
             break;
         case 0xB0:;
             // BCS - Branch on Carry Set, it's jumping if the carry is set.
@@ -323,18 +322,15 @@ int cpu_step(CPU *cpu){
             operand = READ8(cpu->ram, cpu->registers.pc+1);
             if(cpu->registers.a >= operand){
                 SETCARRY(cpu->registers.status);
+            }else{
+                CLEARCARRY(cpu->registers.status);
             }
             if(cpu->registers.a == operand){
                 SETZERO(cpu->registers.status);
             }else{
                 CLEARZERO(cpu->registers.status);
             }
-            if(cpu->registers.a < operand)
-            {
-                SETNEGATIVE(cpu->registers.status);
-            }else{
-                CLEARNEGATIVE(cpu->registers.status);
-            }
+            FIXNEGATIVE(cpu->registers.a - operand, cpu->registers.status);
             increamentPC+=2;
             break;
         case 0xD0:;
