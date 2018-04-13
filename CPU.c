@@ -32,7 +32,7 @@ void power_up(CPU *cpu){
     cpu->registers.a = 0;
     cpu->registers.x = 0;
     cpu->registers.y = 0;
-    cpu->registers.sp = 0;
+    cpu->registers.sp = 0xFD;
     WRITE16(cpu->ram, 0x4017, 0x00);
     WRITE16(cpu->ram, 0x4015, 0x00);
     // We need to duplicate rom PRG to 0x8000 and 0xc000
@@ -262,6 +262,18 @@ int cpu_step(CPU *cpu){
             WRITE8(cpu->ram, operand,cpu->registers.x);
             increamentPC+=2;
             break;
+        case 0x88:;
+            // DEY - Decrement Y Register by 1.
+            cpu->registers.y--;
+            FIXFLAGS(cpu->registers.y, cpu->registers.status);
+            increamentPC++;
+            break;
+        case 0x8A:;
+            // TXA - Transfer X register to A.
+            cpu->registers.a = cpu->registers.x;
+            FIXFLAGS(cpu->registers.a, cpu->registers.status);
+            increamentPC++;
+            break;
         case 0x90:;
             // BCC - Branch if carry
             operand = READ8_ABS(cpu->ram, cpu->registers.pc + 1);
@@ -271,6 +283,11 @@ int cpu_step(CPU *cpu){
             }
             increamentPC+= 2;
             break;
+        case 0x98:;
+            // TYA - Transfer Y register to A register.
+            cpu->registers.a = cpu->registers.y;
+            FIXFLAGS(cpu->registers.a, cpu->registers.status);
+            increamentPC++;
             break;
         case 0xA0:;
             // LDY - Loads a value to Y
@@ -289,6 +306,12 @@ int cpu_step(CPU *cpu){
             cpu->registers.x = operand;
             increamentPC+=2;
             break;
+        case 0xA8:;
+            // TAY - Transfer A register to Y.
+            cpu->registers.y = cpu->registers.a;
+            FIXFLAGS(cpu->registers.y, cpu->registers.status);
+            increamentPC++;
+            break;
         case 0xA9:;
             // LDA - Loads a value to A.
             // Addressing mode: Immediate.
@@ -296,6 +319,12 @@ int cpu_step(CPU *cpu){
             cpu->registers.a = operand;
             FIXFLAGS(cpu->registers.a, cpu->registers.status);
             increamentPC+=2;
+            break;
+        case 0xAA:;
+            // TAX - Transfer A register to X register.
+            cpu->registers.x = cpu->registers.a;
+            FIXFLAGS(cpu->registers.x, cpu->registers.status);
+            increamentPC++;
             break;
         case 0xB0:;
             // BCS - Branch on Carry Set, it's jumping if the carry is set.
@@ -310,6 +339,12 @@ int cpu_step(CPU *cpu){
         case 0xB8:;
             // CLV - Clear overflow flag.
             CLEAROVERFLOW(cpu->registers.status);
+            increamentPC++;
+            break;
+        case 0xBA:;
+            // TSX - Transer stack pointer  to x.
+            cpu->registers.x = cpu->registers.sp;
+            FIXFLAGS(cpu->registers.x, cpu->registers.status);
             increamentPC++;
             break;
         case 0xC0:;
@@ -328,6 +363,12 @@ int cpu_step(CPU *cpu){
             FIXNEGATIVE(cpu->registers.y - operand, cpu->registers.status);
             increamentPC+=2;
             break;
+        case 0xC8:;
+            // INY - Increase Y register by 1.
+            cpu->registers.y++;
+            FIXFLAGS(cpu->registers.y, cpu->registers.status);
+            increamentPC++;
+            break;
         case 0xC9:;
             // CMP - Compares the contents of the a register with the operand and turns on/off flags accordingly
             // Addressing mode Immediate.
@@ -344,6 +385,12 @@ int cpu_step(CPU *cpu){
             }
             FIXNEGATIVE(cpu->registers.a - operand, cpu->registers.status);
             increamentPC+=2;
+            break;
+        case 0xCA:;
+            // DEX - Decrement X register by 1.
+            cpu->registers.x--;
+            FIXFLAGS(cpu->registers.x, cpu->registers.status);
+            increamentPC++;
             break;
         case 0xD0:;
             // BNE - Branch if not equal, branchs if the zero flag is clear.
@@ -375,6 +422,12 @@ int cpu_step(CPU *cpu){
             }
             FIXNEGATIVE(cpu->registers.x - operand, cpu->registers.status);
             increamentPC+=2;
+            break;
+        case 0xE8:;
+            // INX - Increase the X register by 1.
+            cpu->registers.x++;
+            FIXFLAGS(cpu->registers.x, cpu->registers.status);
+            increamentPC++;
             break;
         case 0xE9:;
             // SBC - Substract with carry.
@@ -426,7 +479,7 @@ int cpu_step(CPU *cpu){
 void PUSH8(CPU *cpu, uint8_t value){
     //printf("PUSHING: 0x%x TO: 0x%x\n", value, 0x100+cpu->registers.sp);
     cpu->ram->memory[0x100+cpu->registers.sp] = value;
-    cpu->registers.sp++;
+    cpu->registers.sp--;
 }
 
 void PUSH16(CPU *cpu, uint16_t value){
@@ -437,7 +490,7 @@ void PUSH16(CPU *cpu, uint16_t value){
 }
 
 uint8_t POP8(CPU *cpu){
-    cpu->registers.sp--;
+    cpu->registers.sp++;
     uint8_t value = cpu->ram->memory[0x100+cpu->registers.sp];
     return value;
 }
