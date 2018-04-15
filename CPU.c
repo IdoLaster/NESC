@@ -256,7 +256,7 @@ int cpu_step(CPU *cpu){
             increamentPC+=2;
             break;
         case 0x86:;
-            // STX - Stores the A register to given address.
+            // STX - Stores the X register to given address.
             // Addressing mode: Zero Page.
             operand = READ8_ZP(cpu->ram, cpu->registers.pc + 1);
             WRITE8(cpu->ram, operand,cpu->registers.x);
@@ -274,6 +274,13 @@ int cpu_step(CPU *cpu){
             FIXFLAGS(cpu->registers.a, cpu->registers.status);
             increamentPC++;
             break;
+        case 0x8E:;
+            // STX - Stores the X register to given address.
+            // Addressing mode: Absolute.
+            operand = READ16(cpu->ram, cpu->registers.pc+1);
+            WRITE8(cpu->ram, operand, cpu->registers.x);
+            increamentPC+=3;
+            break;
         case 0x90:;
             // BCC - Branch if carry
             operand = READ8_ABS(cpu->ram, cpu->registers.pc + 1);
@@ -287,6 +294,11 @@ int cpu_step(CPU *cpu){
             // TYA - Transfer Y register to A register.
             cpu->registers.a = cpu->registers.y;
             FIXFLAGS(cpu->registers.a, cpu->registers.status);
+            increamentPC++;
+            break;
+        case 0x9A:;
+            // TXS - Transer X to Stack pointer.
+            cpu->registers.sp = cpu->registers.x;
             increamentPC++;
             break;
         case 0xA0:;
@@ -325,6 +337,24 @@ int cpu_step(CPU *cpu){
             cpu->registers.x = cpu->registers.a;
             FIXFLAGS(cpu->registers.x, cpu->registers.status);
             increamentPC++;
+            break;
+        case 0xAD:;
+            // LDA - Loads a value to A.
+            // Addressing mode: Absolute.
+            operand = READ16(cpu->ram, cpu->registers.pc + 1);
+            value = READ8_ABS(cpu->ram, operand);
+            cpu->registers.a = value;
+            FIXFLAGS(cpu->registers.a, cpu->registers.status);
+            increamentPC+=3;
+            break;
+        case 0xAE:;
+            // LDX - Loads a value to X.
+            // Addressing Mode: Absolute.
+            operand = READ16(cpu->ram, cpu->registers.pc + 1);
+            value = READ8_ABS(cpu->ram, operand);
+            cpu->registers.x = value;
+            FIXFLAGS(cpu->registers.x, cpu->registers.status);
+            increamentPC+=3;
             break;
         case 0xB0:;
             // BCS - Branch on Carry Set, it's jumping if the carry is set.
@@ -477,7 +507,6 @@ int cpu_step(CPU *cpu){
 }
 
 void PUSH8(CPU *cpu, uint8_t value){
-    //printf("PUSHING: 0x%x TO: 0x%x\n", value, 0x100+cpu->registers.sp);
     cpu->ram->memory[0x100+cpu->registers.sp] = value;
     cpu->registers.sp--;
 }
