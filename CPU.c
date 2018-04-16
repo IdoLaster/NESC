@@ -111,7 +111,8 @@ int cpu_step(CPU *cpu){
         case 0x20:;
             // JSR stands for Jump to Subroutine;
             // Pushs the pc+3 to the stack and then jumping to the given operand.
-            PUSH16(cpu, cpu->registers.pc+3);
+            PUSH16(cpu, cpu->registers.pc+2);
+            //printf("JSR PUSHING: 0x%x\n",cpu->registers.pc+3);
             operand = READ16_ABS(cpu->ram, (cpu->registers.pc + 1));
             cpu->registers.pc = operand;
             break;
@@ -172,6 +173,23 @@ int cpu_step(CPU *cpu){
             cpu->registers.status = cpu->registers.status | 0b1;
             increamentPC++;
             break;
+        case 0x40:;
+            // RTI - Return from Interrupt.
+            // Pulling the status flag from the stack as well as the pc.
+            status_register = POP8(cpu);
+            for (int i = 0; i < 7; ++i) {
+                if(i == 4 || i ==5){
+                    continue;
+                }
+                if(CHECK_BIT(status_register, i)){
+                    SET_BIT(cpu->registers.status, i);
+                }else{
+                    CLEAR_BIT(cpu->registers.status, i);
+                }
+            }
+            uint16_t return_to = POP16(cpu);
+            cpu->registers.pc = return_to;
+            break;
         case 0x48:;
             // PHA - Push the A register
             PUSH8(cpu, cpu->registers.a);
@@ -203,14 +221,14 @@ int cpu_step(CPU *cpu){
             break;
         case 0x60:;
             // RTS - Return from subroutine
-            uint16_t return_to = POP16(cpu);
+            return_to = POP16(cpu);
             printf("RETURNING TO: 0x%x\n", return_to);
-            cpu->registers.pc = return_to;
+            cpu->registers.pc = return_to+1;
             break;
         case 0x68:;
             // PLA - Pull an 8bit value from the stack to the A register.
-            uint8_t flags = POP8(cpu);
-            cpu->registers.a = flags;
+            value = POP8(cpu);
+            cpu->registers.a = value;
             FIXFLAGS(cpu->registers.a, cpu->registers.status);
             increamentPC++;
             break;
@@ -256,7 +274,7 @@ int cpu_step(CPU *cpu){
             increamentPC+=2;
             break;
         case 0x86:;
-            // STX - Stores the A register to given address.
+            // STX - Stores the X register to given address.
             // Addressing mode: Zero Page.
             operand = READ8_ZP(cpu->ram, cpu->registers.pc + 1);
             WRITE8(cpu->ram, operand,cpu->registers.x);
@@ -274,6 +292,13 @@ int cpu_step(CPU *cpu){
             FIXFLAGS(cpu->registers.a, cpu->registers.status);
             increamentPC++;
             break;
+        case 0x8E:;
+            // STX - Stores the X register to given address.
+            // Addressing mode: Absolute.
+            operand = READ16(cpu->ram, cpu->registers.pc + 1);
+            WRITE8(cpu->ram, operand, cpu->registers.x);
+            increamentPC+=3;
+            break;
         case 0x90:;
             // BCC - Branch if carry
             operand = READ8_ABS(cpu->ram, cpu->registers.pc + 1);
@@ -287,6 +312,11 @@ int cpu_step(CPU *cpu){
             // TYA - Transfer Y register to A register.
             cpu->registers.a = cpu->registers.y;
             FIXFLAGS(cpu->registers.a, cpu->registers.status);
+            increamentPC++;
+            break;
+        case 0x9A:;
+            // TXS - Transer X to stack pointer.
+            cpu->registers.sp = cpu->registers.x;
             increamentPC++;
             break;
         case 0xA0:;
@@ -325,6 +355,24 @@ int cpu_step(CPU *cpu){
             cpu->registers.x = cpu->registers.a;
             FIXFLAGS(cpu->registers.x, cpu->registers.status);
             increamentPC++;
+            break;
+        case 0xAD:;
+            // LDA - Loads a value to A register.
+            // Addressing mode: Absolute.
+            operand = READ16(cpu->ram, cpu->registers.pc+1);
+            value = READ8(cpu->ram, operand);
+            cpu->registers.a = value;
+            FIXFLAGS(cpu->registers.a, cpu->registers.status);
+            increamentPC+=3;
+            break;
+        case 0xAE:;
+            // LDX - Load a value to x.
+            // Addressing mode: Absolute.
+            operand = READ16(cpu->ram, cpu->registers.pc+1);
+            value = READ8(cpu->ram, operand);
+            cpu->registers.x = value;
+            FIXFLAGS(cpu->registers.x, cpu->registers.status);
+            increamentPC+=3;
             break;
         case 0xB0:;
             // BCS - Branch on Carry Set, it's jumping if the carry is set.
@@ -477,16 +525,15 @@ int cpu_step(CPU *cpu){
 }
 
 void PUSH8(CPU *cpu, uint8_t value){
-    //printf("PUSHING: 0x%x TO: 0x%x\n", value, 0x100+cpu->registers.sp);
+    //printf("---PUSHING VALUE: 0x%x---\n",value);
     cpu->ram->memory[0x100+cpu->registers.sp] = value;
     cpu->registers.sp--;
 }
-
 void PUSH16(CPU *cpu, uint16_t value){
     uint8_t lower = value & 0xFF;
     uint8_t higher = value >> 8;
-    PUSH8(cpu, lower);
     PUSH8(cpu, higher);
+    PUSH8(cpu, lower);
 }
 
 uint8_t POP8(CPU *cpu){
@@ -496,7 +543,11 @@ uint8_t POP8(CPU *cpu){
 }
 
 uint16_t POP16(CPU *cpu){
-    uint8_t higher = POP8(cpu);
     uint8_t lower = POP8(cpu);
+    uint8_t higher = POP8(cpu);
     return (higher << 8) | (lower & 0xff);
+}
+
+uint8_t STACK_TOP(CPU *cpu){
+    return cpu->ram->memory[0x100+cpu->registers.sp];
 }
