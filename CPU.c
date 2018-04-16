@@ -139,7 +139,7 @@ int cpu_step(CPU *cpu){
             // PLP - Pull a value from the stack to the status register.
             // The wiki says we should ignore bit 4 and 5
             uint8_t status_register = POP8(cpu);
-            for (int i = 0; i < 7; ++i) {
+            for (int i = 0; i < 8; ++i) {
                 if(i == 4 || i ==5){
                     continue;
                 }
@@ -177,7 +177,8 @@ int cpu_step(CPU *cpu){
             // RTI - Return from Interrupt.
             // Pulling the status flag from the stack as well as the pc.
             status_register = POP8(cpu);
-            for (int i = 0; i < 7; ++i) {
+            for (int i = 0; i < 8; ++i) {
+                //Ignore bit 4 and 5
                 if(i == 4 || i ==5){
                     continue;
                 }
@@ -525,7 +526,6 @@ int cpu_step(CPU *cpu){
 }
 
 void PUSH8(CPU *cpu, uint8_t value){
-    //printf("---PUSHING VALUE: 0x%x---\n",value);
     cpu->ram->memory[0x100+cpu->registers.sp] = value;
     cpu->registers.sp--;
 }
