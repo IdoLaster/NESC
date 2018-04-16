@@ -60,4 +60,6 @@ void PUSH16(CPU *cpu, uint16_t value);
 
 uint8_t POP8(CPU *cpu);
 uint16_t POP16(CPU *cpu);
+
+uint8_t STACK_TOP(CPU *cpu);
 #endif //NES_CPU_H
