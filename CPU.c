@@ -82,6 +82,18 @@ int cpu_step(CPU *cpu){
             FIXFLAGS(cpu->registers.a, cpu->registers.status);
             increamentPC+=2;
             break;
+        case 0x0A:;
+            // ASL - Arithmetic Shift Left. Shifts one bit to the left.
+            // Addressing Mode: Accumulator.
+            if(CHECK_BIT(cpu->registers.a,7)){
+                SETCARRY(cpu->registers.status);
+            }else{
+                CLEARCARRY(cpu->registers.status);
+            }
+            cpu->registers.a = cpu->registers.a << 1;
+            FIXFLAGS(cpu->registers.a, cpu->registers.status);
+            increamentPC++;
+            break;
         case 0x10:;
             // BPL - Branch if positive, branching if the negative flag is clear.
             // Addressing mode: Relative.
@@ -204,6 +216,18 @@ int cpu_step(CPU *cpu){
             FIXFLAGS(cpu->registers.a, cpu->registers.status);
             increamentPC+=2;
             break;
+        case 0x4A:;
+            // LSR - Logical Shift Right. Shifts one bit to the right.
+            // Addressing Mode: Accumulator
+            if(CHECK_BIT(cpu->registers.a,0)){
+                SETCARRY(cpu->registers.status);
+            }else{
+                CLEARCARRY(cpu->registers.status);
+            }
+            cpu->registers.a = cpu->registers.a >> 1;
+            FIXFLAGS(cpu->registers.a, cpu->registers.status);
+            increamentPC++;
+            break;
         case 0x4C:;
             // JMP - jumps to given address.
             // Addressing mode: Abs.
@@ -252,6 +276,23 @@ int cpu_step(CPU *cpu){
             cpu->registers.a = sum & 0xFF;
             FIXFLAGS(cpu->registers.a, cpu->registers.status);
             increamentPC+=2;
+            break;
+        case 0x6A:;
+            // ROR - Rotate right, shifts every bit one right and put carry as the 7th bit.
+            uint8_t bit_seven = CARRYSET(cpu->registers.status);
+            if(CHECK_BIT(cpu->registers.a, 0)){
+                SETCARRY(cpu->registers.status);
+            }else{
+                CLEARCARRY(cpu->registers.status);
+            }
+            cpu->registers.a = cpu->registers.a >> 1;
+            if(bit_seven){
+                SET_BIT(cpu->registers.a, 7);
+            }else{
+                CLEAR_BIT(cpu->registers.a, 7);
+            }
+            FIXFLAGS(cpu->registers.a, cpu->registers.status);
+            increamentPC++;
             break;
         case 0x70:;
             // BVS - Branch if overflow is set
