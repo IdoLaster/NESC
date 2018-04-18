@@ -171,6 +171,24 @@ int cpu_step(CPU *cpu){
             FIXFLAGS(cpu->registers.a, cpu->registers.status);
             increamentPC+=2;
             break;
+        case 0x2A:;
+            // ROL - Rotate right, shifts every bit one right and put carry as the 0th bit.
+            // Addressing Mode: Accumulator.
+            uint8_t bit_zero = CARRYSET(cpu->registers.status);
+            if(CHECK_BIT(cpu->registers.a, 7)){
+                SETCARRY(cpu->registers.status);
+            }else{
+                CLEARCARRY(cpu->registers.status);
+            }
+            cpu->registers.a = cpu->registers.a << 1;
+            if(bit_zero){
+                SET_BIT(cpu->registers.a, 0);
+            }else{
+                CLEAR_BIT(cpu->registers.a, 0);
+            }
+            FIXFLAGS(cpu->registers.a, cpu->registers.status);
+            increamentPC++;
+            break;
         case 0x30:;
             // BMI - Branch if minues - branchs if the negative flag is set.
             // Addressing mode: Relative
@@ -279,6 +297,7 @@ int cpu_step(CPU *cpu){
             break;
         case 0x6A:;
             // ROR - Rotate right, shifts every bit one right and put carry as the 7th bit.
+            // Addressing Mode: Accumulator.
             uint8_t bit_seven = CARRYSET(cpu->registers.status);
             if(CHECK_BIT(cpu->registers.a, 0)){
                 SETCARRY(cpu->registers.status);
@@ -334,6 +353,13 @@ int cpu_step(CPU *cpu){
             FIXFLAGS(cpu->registers.a, cpu->registers.status);
             increamentPC++;
             break;
+        case 0x8D:;
+            // STA - Stores the a register at a given address.
+            // Addressing mode: Absolute.
+            operand = READ16(cpu->ram, cpu->registers.pc+1);
+            WRITE8(cpu->ram, operand, cpu->registers.a);
+            increamentPC+=3;
+            break;
         case 0x8E:;
             // STX - Stores the X register to given address.
             // Addressing mode: Absolute.
@@ -376,6 +402,15 @@ int cpu_step(CPU *cpu){
             FIXZERO(operand, cpu->registers.status);
             FIXNEGATIVE(operand, cpu->registers.status);
             cpu->registers.x = operand;
+            increamentPC+=2;
+            break;
+        case 0xA5:;
+            // LDA - Loads a value to A register from memory.
+            // Addressing Mode: Zero-Page
+            operand = READ8(cpu->ram, cpu->registers.pc+1);
+            value = READ8_ZP(cpu->ram, operand);
+            cpu->registers.a = value;
+            FIXFLAGS(cpu->registers.a, cpu->registers.status);
             increamentPC+=2;
             break;
         case 0xA8:;
