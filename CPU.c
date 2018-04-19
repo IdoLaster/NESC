@@ -395,6 +395,14 @@ int cpu_step(CPU *cpu){
             FIXFLAGS(cpu->registers.y, cpu->registers.status);
             increamentPC+=2;
             break;
+        case 0xA1:;
+            // LDA - Loads a value to A.
+            // Addressing Mode: (Indirect,X).
+            value = READ8_INDIRECT_X(cpu->ram, cpu->registers.pc+1, cpu->registers.x);
+            cpu->registers.a = value;
+            FIXFLAGS(cpu->registers.a, cpu->registers.status);
+            increamentPC+=2;
+            break;
         case 0xA2:;
             // LDX - Loads a value to x
             // Addressing mode: Immediate.
