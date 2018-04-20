@@ -49,8 +49,13 @@ int cpu_step(CPU *cpu){
     printf("0x%x\n",op_code);
     size_t increamentPC = 0;
     switch(op_code){
-        case 0x03:;
-            // SLO instruction, preforms a ASL (Shift left) And then OR with A.
+        case 0x01:;
+            // ORA - Performs an OR with A register and a given operand.
+            // Addressing Mode: Indirect X.
+            value = READ8_INDIRECT_X(cpu->ram, cpu->registers.pc + 1, cpu->registers.x);
+            cpu->registers.a |= value;
+            FIXFLAGS(cpu->registers.a, cpu->registers.status);
+            increamentPC+=2;
             break;
         case 0x07:;
             // SLO instruction, preforms a ASL (Shift left) And then OR with A.
@@ -68,7 +73,6 @@ int cpu_step(CPU *cpu){
         case 0x08:;
             // PHP:
             // Pushing prossecor status flag.
-            //TODO: Check if turnign on bits 4 and 5 is needed.
             value = cpu->registers.status;
             value |= (1 << 4);
             value |= (1 << 5);
@@ -124,9 +128,16 @@ int cpu_step(CPU *cpu){
             // JSR stands for Jump to Subroutine;
             // Pushs the pc+3 to the stack and then jumping to the given operand.
             PUSH16(cpu, cpu->registers.pc+2);
-            //printf("JSR PUSHING: 0x%x\n",cpu->registers.pc+3);
             operand = READ16_ABS(cpu->ram, (cpu->registers.pc + 1));
             cpu->registers.pc = operand;
+            break;
+        case 0x21:;
+            // AND - Performs a logical AND with the A register and given operand.
+            // Addressing Mode: Indirect X.
+            value = READ8_INDIRECT_X(cpu->ram, cpu->registers.pc+1, cpu->registers.x);
+            cpu->registers.a &= value;
+            FIXFLAGS(cpu->registers.a, cpu->registers.status);
+            increamentPC+=2;
             break;
         case 0x24:;
             // BIT - Bit Test
@@ -220,6 +231,14 @@ int cpu_step(CPU *cpu){
             }
             uint16_t return_to = POP16(cpu);
             cpu->registers.pc = return_to;
+            break;
+        case 0x41:;
+            // EOR - Performs a xor with the A register and given operand.
+            // Addressing Mode: Indirect X.
+            value = READ8_INDIRECT_X(cpu->ram, cpu->registers.pc + 1, cpu->registers.x);
+            cpu->registers.a ^= value;
+            FIXFLAGS(cpu->registers.a, cpu->registers.status);
+            increamentPC+=2;
             break;
         case 0x48:;
             // PHA - Push the A register
@@ -326,6 +345,12 @@ int cpu_step(CPU *cpu){
             // SEI - Set intrerrupt Disable.
             SETINTERRUPTDISABLE(cpu->registers.status);
             increamentPC+=1;
+            break;
+        case 0x81:;
+            // STA - Store A register at given memory location.
+            // Addressing Mode: Indirect,X.
+            WRITE8_INDIRECT_X(cpu->ram, cpu->registers.pc + 1, cpu->registers.x, cpu->registers.a);
+            increamentPC+=2;
             break;
         case 0x85:;
             // STA - Stores the a register at a given address.
