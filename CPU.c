@@ -66,18 +66,20 @@ int cpu_step(CPU *cpu){
             FIXFLAGS(cpu->registers.a, cpu->registers.status);
             increamentPC+=2;
             break;
-        case 0x07:;
-            // SLO instruction, preforms a ASL (Shift left) And then OR with A.
+        case 0x06:;
+            // ASL - Arithmetic Shift Left. Shifts one bit to the left.
             // Addressing Mode: Zero-Page.
-            uint8_t value = READ8_ZP(cpu->ram, (cpu->registers.pc) + 1);
-            if (value & 0b10000000){
-                cpu->registers.status & 0b00000001;
+            operand = READ8(cpu->ram, cpu->registers.pc+1);
+            uint8_t value_to_shift = READ8_ZP(cpu->ram, operand);
+            if(CHECK_BIT(value_to_shift,7)){
+                SETCARRY(cpu->registers.status);
             }else{
-                cpu->registers.status & 0b00000000;
+                CLEARCARRY(cpu->registers.status);
             }
-            value << 1;
-            cpu->registers.a | value;
-            increamentPC += 2;
+            value_to_shift = value_to_shift << 1;
+            WRITE8_ZP(cpu->ram, operand, value_to_shift);
+            FIXFLAGS(value_to_shift, cpu->registers.status);
+            increamentPC+=2;
             break;
         case 0x08:;
             // PHP:
@@ -177,6 +179,27 @@ int cpu_step(CPU *cpu){
             FIXFLAGS(cpu->registers.a, cpu->registers.status);
             increamentPC+=2;
             break;
+        case 0x26:;
+            // ROL - Rotate right, shifts every bit one right and put carry as the 0th bit.
+            // Addressing Mode: Zero-Page.
+            uint8_t bit_zero = CARRYSET(cpu->registers.status);
+            operand = READ8(cpu->ram, cpu->registers.pc+1);
+            value_to_shift = READ8_ZP(cpu->ram, operand);
+            if(CHECK_BIT(value_to_shift, 7)){
+                SETCARRY(cpu->registers.status);
+            }else{
+                CLEARCARRY(cpu->registers.status);
+            }
+            value_to_shift = value_to_shift << 1;
+            if(bit_zero){
+                SET_BIT(value_to_shift, 0);
+            }else{
+                CLEAR_BIT(value_to_shift, 0);
+            }
+            WRITE8_ZP(cpu->ram, operand, value_to_shift);
+            FIXFLAGS(value_to_shift, cpu->registers.status);
+            increamentPC+=2;
+            break;
         case 0x28:;
             // PLP - Pull a value from the stack to the status register.
             // The wiki says we should ignore bit 4 and 5
@@ -204,7 +227,7 @@ int cpu_step(CPU *cpu){
         case 0x2A:;
             // ROL - Rotate right, shifts every bit one right and put carry as the 0th bit.
             // Addressing Mode: Accumulator.
-            uint8_t bit_zero = CARRYSET(cpu->registers.status);
+            bit_zero = CARRYSET(cpu->registers.status);
             if(CHECK_BIT(cpu->registers.a, 7)){
                 SETCARRY(cpu->registers.status);
             }else{
@@ -266,6 +289,21 @@ int cpu_step(CPU *cpu){
             value = READ8_ZP(cpu->ram, operand);
             cpu->registers.a ^= value;
             FIXFLAGS(cpu->registers.a, cpu->registers.status);
+            increamentPC+=2;
+            break;
+        case 0x46:;
+            // LSR - Logical Shift Right. Shifts one bit to the right.
+            // Addressing Mode: Zero-Page.
+            operand = READ8(cpu->ram, cpu->registers.pc + 1);
+            value = READ8_ZP(cpu->ram, operand);
+            if(CHECK_BIT(value,0)){
+                SETCARRY(cpu->registers.status);
+            }else{
+                CLEARCARRY(cpu->registers.status);
+            }
+            value = value >> 1;
+            WRITE8_ZP(cpu->ram, operand, value);
+            FIXFLAGS(value, cpu->registers.status);
             increamentPC+=2;
             break;
         case 0x48:;
@@ -335,7 +373,6 @@ int cpu_step(CPU *cpu){
             FIXFLAGS(cpu->registers.a, cpu->registers.status);
             increamentPC+=2;
             break;
-            break;
         case 0x65:;
             // ADC - Add with carry
             // Addressing mode: Immediate.
@@ -355,6 +392,27 @@ int cpu_step(CPU *cpu){
             }
             cpu->registers.a = sum & 0xFF;
             FIXFLAGS(cpu->registers.a, cpu->registers.status);
+            increamentPC+=2;
+            break;
+        case 0x66:;
+            // ROR - Rotate right, shifts every bit one right and put carry as the 7th bit.
+            // Addressing Mode: Zero-Page.
+            uint8_t bit_seven = CARRYSET(cpu->registers.status);
+            operand = READ8(cpu->ram, cpu->registers.pc + 1);
+            value_to_shift = READ8_ZP(cpu->ram, operand);
+            if(CHECK_BIT(value_to_shift, 0)){
+                SETCARRY(cpu->registers.status);
+            }else{
+                CLEARCARRY(cpu->registers.status);
+            }
+            value_to_shift = value_to_shift >> 1;
+            if(bit_seven){
+                SET_BIT(value_to_shift, 7);
+            }else{
+                CLEAR_BIT(value_to_shift, 7);
+            }
+            WRITE8_ZP(cpu->ram, operand, value_to_shift);
+            FIXFLAGS(value_to_shift, cpu->registers.status);
             increamentPC+=2;
             break;
         case 0x68:;
@@ -387,7 +445,7 @@ int cpu_step(CPU *cpu){
         case 0x6A:;
             // ROR - Rotate right, shifts every bit one right and put carry as the 7th bit.
             // Addressing Mode: Accumulator.
-            uint8_t bit_seven = CARRYSET(cpu->registers.status);
+            bit_seven = CARRYSET(cpu->registers.status);
             if(CHECK_BIT(cpu->registers.a, 0)){
                 SETCARRY(cpu->registers.status);
             }else{
