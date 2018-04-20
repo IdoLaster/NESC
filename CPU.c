@@ -57,6 +57,15 @@ int cpu_step(CPU *cpu){
             FIXFLAGS(cpu->registers.a, cpu->registers.status);
             increamentPC+=2;
             break;
+        case 0x05:;
+            // ORA - Ors the opearnd with a.
+            // Addressing Mode: Zero-Page.
+            operand = READ8(cpu->ram, cpu->registers.pc+1);
+            value = READ8_ZP(cpu->ram, operand);
+            cpu->registers.a |= value;
+            FIXFLAGS(cpu->registers.a, cpu->registers.status);
+            increamentPC+=2;
+            break;
         case 0x07:;
             // SLO instruction, preforms a ASL (Shift left) And then OR with A.
             // Addressing Mode: Zero-Page.
@@ -81,6 +90,7 @@ int cpu_step(CPU *cpu){
             break;
         case 0x09:;
             // ORA - Ors the opearnd with a.
+            // Addressing Mode: Immediate.
             operand = READ8(cpu->ram, cpu->registers.pc+1);
             cpu->registers.a |= operand;
             FIXFLAGS(cpu->registers.a, cpu->registers.status);
@@ -156,6 +166,15 @@ int cpu_step(CPU *cpu){
             }else{
                  CLEARNEGATIVE(cpu->registers.status);
             }
+            increamentPC+=2;
+            break;
+        case 0x25:;
+            // AND - Preforms a bitwise AND with a and the operand
+            // Addressing mode: Zero-Page.
+            operand = READ8(cpu->ram,cpu->registers.pc+1);
+            value = READ8_ZP(cpu->ram, operand);
+            cpu->registers.a &= value;
+            FIXFLAGS(cpu->registers.a, cpu->registers.status);
             increamentPC+=2;
             break;
         case 0x28:;
@@ -240,6 +259,15 @@ int cpu_step(CPU *cpu){
             FIXFLAGS(cpu->registers.a, cpu->registers.status);
             increamentPC+=2;
             break;
+        case 0x45:;
+            // EOR - Exclusive or with A and the operand.
+            // Addressing mode: Zero-Page.
+            operand = READ8(cpu->ram, cpu->registers.pc+1);
+            value = READ8_ZP(cpu->ram, operand);
+            cpu->registers.a ^= value;
+            FIXFLAGS(cpu->registers.a, cpu->registers.status);
+            increamentPC+=2;
+            break;
         case 0x48:;
             // PHA - Push the A register
             PUSH8(cpu, cpu->registers.a);
@@ -287,6 +315,48 @@ int cpu_step(CPU *cpu){
             printf("RETURNING TO: 0x%x\n", return_to);
             cpu->registers.pc = return_to+1;
             break;
+        case 0x61:;
+            // ADC - Add with carry.
+            // Addressing mode: Indirect X.
+            operand = READ8_INDIRECT_X(cpu->ram, cpu->registers.pc+1, cpu->registers.x);
+            uint16_t sum = cpu->registers.a + operand + CARRYSET(cpu->registers.status);
+            uint8_t overflow = (cpu->registers.a ^ sum) & (operand ^ sum) & 0x80;
+            if(overflow){
+                SETOVERFLOW(cpu->registers.status);
+            }else{
+                CLEAROVERFLOW(cpu->registers.status);
+            }
+            if(sum > 255){
+                SETCARRY(cpu->registers.status);
+            }else{
+                CLEARCARRY(cpu->registers.status);
+            }
+            cpu->registers.a = sum & 0xFF;
+            FIXFLAGS(cpu->registers.a, cpu->registers.status);
+            increamentPC+=2;
+            break;
+            break;
+        case 0x65:;
+            // ADC - Add with carry
+            // Addressing mode: Immediate.
+            operand = READ8(cpu->ram, cpu->registers.pc+1);
+            value = READ8_ZP(cpu->ram, operand);
+            sum = cpu->registers.a + value + CARRYSET(cpu->registers.status);
+            overflow = (cpu->registers.a ^ sum) & (value ^ sum) & 0x80;
+            if(overflow){
+                SETOVERFLOW(cpu->registers.status);
+            }else{
+                CLEAROVERFLOW(cpu->registers.status);
+            }
+            if(sum > 255){
+                SETCARRY(cpu->registers.status);
+            }else{
+                CLEARCARRY(cpu->registers.status);
+            }
+            cpu->registers.a = sum & 0xFF;
+            FIXFLAGS(cpu->registers.a, cpu->registers.status);
+            increamentPC+=2;
+            break;
         case 0x68:;
             // PLA - Pull an 8bit value from the stack to the A register.
             value = POP8(cpu);
@@ -298,8 +368,8 @@ int cpu_step(CPU *cpu){
             // ADC - Add with carry
             // Addressing mode: Immediate.
             operand = READ8(cpu->ram, cpu->registers.pc+1);
-            uint16_t sum = cpu->registers.a + operand + CARRYSET(cpu->registers.status);
-            uint8_t overflow = (cpu->registers.a ^ sum) & (operand ^ sum) & 0x80;
+            sum = cpu->registers.a + operand + CARRYSET(cpu->registers.status);
+            overflow = (cpu->registers.a ^ sum) & (operand ^ sum) & 0x80;
             if(overflow){
                 SETOVERFLOW(cpu->registers.status);
             }else{
@@ -352,6 +422,13 @@ int cpu_step(CPU *cpu){
             WRITE8_INDIRECT_X(cpu->ram, cpu->registers.pc + 1, cpu->registers.x, cpu->registers.a);
             increamentPC+=2;
             break;
+        case 0x84:;
+            // STY - Store Y value to memory.
+            // Addressing Mode: Zero-Page.
+            operand = READ8(cpu->ram, cpu->registers.pc+1);
+            WRITE8_ZP(cpu->ram, operand, cpu->registers.y);
+            increamentPC+=2;
+            break;
         case 0x85:;
             // STA - Stores the a register at a given address.
             // Addressing mode: Zero-page
@@ -362,8 +439,8 @@ int cpu_step(CPU *cpu){
         case 0x86:;
             // STX - Stores the X register to given address.
             // Addressing mode: Zero Page.
-            operand = READ8_ZP(cpu->ram, cpu->registers.pc + 1);
-            WRITE8(cpu->ram, operand,cpu->registers.x);
+            operand = READ8(cpu->ram, cpu->registers.pc + 1);
+            WRITE8_ZP(cpu->ram, operand,cpu->registers.x);
             increamentPC+=2;
             break;
         case 0x88:;
@@ -437,6 +514,16 @@ int cpu_step(CPU *cpu){
             cpu->registers.x = operand;
             increamentPC+=2;
             break;
+        case 0xA4:;
+            // LDY - Loads a value to Y
+            // Addressing mode: Zero-Page.
+            uint8_t address = READ8(cpu->ram, cpu->registers.pc + 1);
+            value = READ8_ZP(cpu->ram, address);
+            cpu->registers.y = value;
+            FIXFLAGS(cpu->registers.y, cpu->registers.status);
+            increamentPC+=2;
+            break;
+            break;
         case 0xA5:;
             // LDA - Loads a value to A register from memory.
             // Addressing Mode: Zero-Page
@@ -444,6 +531,15 @@ int cpu_step(CPU *cpu){
             value = READ8_ZP(cpu->ram, operand);
             cpu->registers.a = value;
             FIXFLAGS(cpu->registers.a, cpu->registers.status);
+            increamentPC+=2;
+            break;
+        case 0xA6:;
+            // LDX - Load a value to x.
+            // Addressing mode: Zero-Page.
+            operand = READ8(cpu->ram, cpu->registers.pc+1);
+            value = READ8_ZP(cpu->ram, operand);
+            cpu->registers.x = value;
+            FIXFLAGS(cpu->registers.x, cpu->registers.status);
             increamentPC+=2;
             break;
         case 0xA8:;
@@ -506,7 +602,8 @@ int cpu_step(CPU *cpu){
             increamentPC++;
             break;
         case 0xC0:;
-            // CPY - Compare with Y, this one is immidate addressing mode.
+            // CPY - Compare with Y, this one is
+            // Addressing Mode: Immidate.
             operand = READ8(cpu->ram, cpu->registers.pc+1);
             if(cpu->registers.y >= operand){
                 SETCARRY(cpu->registers.status);
@@ -519,6 +616,59 @@ int cpu_step(CPU *cpu){
                 CLEARZERO(cpu->registers.status);
             }
             FIXNEGATIVE(cpu->registers.y - operand, cpu->registers.status);
+            increamentPC+=2;
+            break;
+        case 0xC1:;
+            // CMP - Compares the contents of the a register with the operand and turns on/off flags accordingly
+            // Addressing mode Indirect X.
+            operand = READ8_INDIRECT_X(cpu->ram, cpu->registers.pc+1, cpu->registers.x);
+            if(cpu->registers.a >= operand){
+                SETCARRY(cpu->registers.status);
+            }else{
+                CLEARCARRY(cpu->registers.status);
+            }
+            if(cpu->registers.a == operand){
+                SETZERO(cpu->registers.status);
+            }else{
+                CLEARZERO(cpu->registers.status);
+            }
+            FIXNEGATIVE(cpu->registers.a - operand, cpu->registers.status);
+            increamentPC+=2;
+            break;
+        case 0xC4:;
+            // CPY - Compare with Y, this one is
+            // Addressing Mode: Zero-Page.
+            operand = READ8(cpu->ram, cpu->registers.pc+1);
+            value = READ8_ZP(cpu->ram, operand);
+            if(cpu->registers.y >= value){
+                SETCARRY(cpu->registers.status);
+            }else{
+                CLEARCARRY(cpu->registers.status);
+            }
+            if(cpu->registers.y == value){
+                SETZERO(cpu->registers.status);
+            }else{
+                CLEARZERO(cpu->registers.status);
+            }
+            FIXNEGATIVE(cpu->registers.y - value, cpu->registers.status);
+            increamentPC+=2;
+            break;
+        case 0xC5:;
+            // CMP - Compares the contents of the a register with the operand and turns on/off flags accordingly
+            // Addressing mode Zero-Page.
+            operand = READ8(cpu->ram, cpu->registers.pc+1);
+            value = READ8_ZP(cpu->ram, operand);
+            if(cpu->registers.a >= value){
+                SETCARRY(cpu->registers.status);
+            }else{
+                CLEARCARRY(cpu->registers.status);
+            }
+            if(cpu->registers.a == value){
+                SETZERO(cpu->registers.status);
+            }else{
+                CLEARZERO(cpu->registers.status);
+            }
+            FIXNEGATIVE(cpu->registers.a - value, cpu->registers.status);
             increamentPC+=2;
             break;
         case 0xC8:;
@@ -581,15 +731,10 @@ int cpu_step(CPU *cpu){
             FIXNEGATIVE(cpu->registers.x - operand, cpu->registers.status);
             increamentPC+=2;
             break;
-        case 0xE8:;
-            // INX - Increase the X register by 1.
-            cpu->registers.x++;
-            FIXFLAGS(cpu->registers.x, cpu->registers.status);
-            increamentPC++;
-            break;
-        case 0xE9:;
+        case 0xE1:;
             // SBC - Substract with carry.
-            operand = READ8(cpu->ram, cpu->registers.pc+1) ^ 0xFF;
+            // Addressing Mode: Indirect X.
+            operand = READ8_INDIRECT_X(cpu->ram, cpu->registers.pc+1, cpu->registers.x) ^ 0xFF;
             sum = cpu->registers.a + operand + CARRYSET(cpu->registers.status);
             overflow = (cpu->registers.a ^ sum) & (operand ^ sum) & 0x80;
             if(overflow){
@@ -606,6 +751,68 @@ int cpu_step(CPU *cpu){
             FIXFLAGS(cpu->registers.a, cpu->registers.status);
             increamentPC+=2;
             break;
+        case 0xE4:;
+            operand = READ8(cpu->ram, cpu->registers.pc+1);
+            value = READ8_ZP(cpu->ram, operand);
+            if(cpu->registers.x >= value){
+                SETCARRY(cpu->registers.status);
+            }else{
+                CLEARCARRY(cpu->registers.status);
+            }
+            if(cpu->registers.x == value){
+                SETZERO(cpu->registers.status);
+            }else{
+                CLEARZERO(cpu->registers.status);
+            }
+            FIXNEGATIVE(cpu->registers.x - value, cpu->registers.status);
+            increamentPC+=2;
+            break;
+        case 0xE5:;
+            // SBC - Substract with carry.
+            // Addressing Mode: Zero-Page.
+            operand = READ8(cpu->ram, cpu->registers.pc+1);
+            value = READ8_ZP(cpu->ram, operand) ^ 0xFF;
+            sum = cpu->registers.a + value + CARRYSET(cpu->registers.status);
+            overflow = (cpu->registers.a ^ sum) & (value ^ sum) & 0x80;
+            if(overflow){
+                SETOVERFLOW(cpu->registers.status);
+            }else{
+                CLEAROVERFLOW(cpu->registers.status);
+            }
+            if(sum > 255){
+                SETCARRY(cpu->registers.status);
+            }else{
+                CLEARCARRY(cpu->registers.status);
+            }
+            cpu->registers.a = sum & 0xFF;
+            FIXFLAGS(cpu->registers.a, cpu->registers.status);
+            increamentPC+=2;
+            break;
+        case 0xE8:;
+            // INX - Increase the X register by 1.
+            cpu->registers.x++;
+            FIXFLAGS(cpu->registers.x, cpu->registers.status);
+            increamentPC++;
+            break;
+        case 0xE9:;
+            // SBC - Substract with carry.
+            // Addressing Mode: Immediate.
+            operand = READ8(cpu->ram, cpu->registers.pc+1) ^ 0xFF;
+            sum = cpu->registers.a + operand + CARRYSET(cpu->registers.status);
+            overflow = (cpu->registers.a ^ sum) & (operand ^ sum) & 0x80;
+            if(overflow){
+                SETOVERFLOW(cpu->registers.status);
+            }else{
+                CLEAROVERFLOW(cpu->registers.status);
+            }
+            if(sum > 255){
+                SETCARRY(cpu->registers.status);
+            }else{
+                CLEARCARRY(cpu->registers.status);
+            }
+            cpu->registers.a = sum & 0xFF;
+            FIXFLAGS(cpu->registers.a, cpu->registers.status);
+            increamentPC+=2;
             break;
         case 0xEA:;
             // Other NOP instuction, does N-O-T-H-I-N-G.
