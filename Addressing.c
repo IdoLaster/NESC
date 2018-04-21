@@ -84,11 +84,11 @@ uint16_t INDIRECT_JMP(RAM *ram, uint16_t addr){
     uint16_t lower_location = READ16(ram, addr);
     uint16_t higher_location = READ16(ram, addr) + 1;
     uint8_t lower = READ8(ram, lower_location);
-    uint8_t higher = READ8(ram, higher_location);
+
     if(higher_location % 0x100 == 0){
         higher_location = lower_location - 0xFF;
     }
-    printf("[JMP] LOWER: 0x%x HIGHER: 0x%x\n", lower, higher);
+    uint8_t higher = READ8(ram, higher_location);
     uint16_t address = (higher << 8) | (lower & 0xff);
     return address;
 }
