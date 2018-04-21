@@ -577,6 +577,10 @@ int cpu_step(CPU *cpu){
             FIXFLAGS(cpu->registers.a, cpu->registers.status);
             increamentPC++;
             break;
+        case 0x6C:;
+            uint16_t address_to_jump = INDIRECT_JMP(cpu->ram, cpu->registers.pc+1);
+            cpu->registers.pc = address_to_jump;
+            break;
         case 0x6D:;
             // ADC - Add with carry.
             // Addressing mode: Abs.
