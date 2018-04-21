@@ -110,6 +110,21 @@ int cpu_step(CPU *cpu){
             FIXFLAGS(cpu->registers.a, cpu->registers.status);
             increamentPC++;
             break;
+        case 0x0E:;
+            // ASL - Arithmetic Shift Left. Shifts one bit to the left.
+            // Addressing Mode: Abs.
+            operand = READ16(cpu->ram, cpu->registers.pc+1);
+            value_to_shift = READ8(cpu->ram, operand);
+            if(CHECK_BIT(value_to_shift,7)){
+                SETCARRY(cpu->registers.status);
+            }else{
+                CLEARCARRY(cpu->registers.status);
+            }
+            value_to_shift = value_to_shift << 1;
+            WRITE8(cpu->ram, operand, value_to_shift);
+            FIXFLAGS(value_to_shift, cpu->registers.status);
+            increamentPC+=3;
+            break;
         case 0x10:;
             // BPL - Branch if positive, branching if the negative flag is clear.
             // Addressing mode: Relative.
@@ -276,6 +291,27 @@ int cpu_step(CPU *cpu){
             FIXFLAGS(cpu->registers.a, cpu->registers.status);
             increamentPC+=3;
             break;
+        case 0x2E:;
+            // ROL - Rotate right, shifts every bit one right and put carry as the 0th bit.
+            // Addressing Mode: Abs.
+            bit_zero = CARRYSET(cpu->registers.status);
+            operand = READ16(cpu->ram, cpu->registers.pc+1);
+            value_to_shift = READ8(cpu->ram, operand);
+            if(CHECK_BIT(value_to_shift, 7)){
+                SETCARRY(cpu->registers.status);
+            }else{
+                CLEARCARRY(cpu->registers.status);
+            }
+            value_to_shift = value_to_shift << 1;
+            if(bit_zero){
+                SET_BIT(value_to_shift, 0);
+            }else{
+                CLEAR_BIT(value_to_shift, 0);
+            }
+            WRITE8(cpu->ram, operand, value_to_shift);
+            FIXFLAGS(value_to_shift, cpu->registers.status);
+            increamentPC+=3;
+            break;
         case 0x30:;
             // BMI - Branch if minues - branchs if the negative flag is set.
             // Addressing mode: Relative
@@ -379,6 +415,21 @@ int cpu_step(CPU *cpu){
             value = READ8(cpu->ram, operand);
             cpu->registers.a ^= value;
             FIXFLAGS(cpu->registers.a, cpu->registers.status);
+            increamentPC+=3;
+            break;
+        case 0x4E:;
+            // LSR - Logical Shift Right. Shifts one bit to the right.
+            // Addressing Mode: Abs.
+            operand = READ16(cpu->ram, cpu->registers.pc + 1);
+            value = READ8(cpu->ram, operand);
+            if(CHECK_BIT(value,0)){
+                SETCARRY(cpu->registers.status);
+            }else{
+                CLEARCARRY(cpu->registers.status);
+            }
+            value = value >> 1;
+            WRITE8(cpu->ram, operand, value);
+            FIXFLAGS(value, cpu->registers.status);
             increamentPC+=3;
             break;
         case 0x50:;
@@ -522,6 +573,27 @@ int cpu_step(CPU *cpu){
             }
             cpu->registers.a = sum & 0xFF;
             FIXFLAGS(cpu->registers.a, cpu->registers.status);
+            increamentPC+=3;
+            break;
+        case 0x6E:;
+            // ROR - Rotate right, shifts every bit one right and put carry as the 7th bit.
+            // Addressing Mode: Abs.
+            bit_seven = CARRYSET(cpu->registers.status);
+            operand = READ16(cpu->ram, cpu->registers.pc + 1);
+            value_to_shift = READ8(cpu->ram, operand);
+            if(CHECK_BIT(value_to_shift, 0)){
+                SETCARRY(cpu->registers.status);
+            }else{
+                CLEARCARRY(cpu->registers.status);
+            }
+            value_to_shift = value_to_shift >> 1;
+            if(bit_seven){
+                SET_BIT(value_to_shift, 7);
+            }else{
+                CLEAR_BIT(value_to_shift, 7);
+            }
+            WRITE8(cpu->ram, operand, value_to_shift);
+            FIXFLAGS(value_to_shift, cpu->registers.status);
             increamentPC+=3;
             break;
         case 0x70:;
@@ -884,6 +956,16 @@ int cpu_step(CPU *cpu){
             FIXNEGATIVE(cpu->registers.a - value, cpu->registers.status);
             increamentPC+=3;
             break;
+        case 0xCE:;
+            // Dec - Decrease a memory value by 1.
+            // Addressing Mode: Abs.
+            operand = READ16(cpu->ram, cpu->registers.pc + 1);
+            value_to_decrease = READ8(cpu->ram, operand);
+            value_to_decrease--;
+            WRITE8(cpu->ram, operand, value_to_decrease);
+            FIXFLAGS(value_to_decrease, cpu->registers.status);
+            increamentPC+=3;
+            break;
         case 0xD0:;
             // BNE - Branch if not equal, branchs if the zero flag is clear.
             if(!ZEROSET(cpu->registers.status)){
@@ -1049,6 +1131,16 @@ int cpu_step(CPU *cpu){
             }
             cpu->registers.a = sum & 0xFF;
             FIXFLAGS(cpu->registers.a, cpu->registers.status);
+            increamentPC+=3;
+            break;
+        case 0xEE:;
+            // INC - Increase a memory value by 1.
+            // Addressing Mode: Abs.
+            operand = READ16(cpu->ram, cpu->registers.pc + 1);
+            value_to_increment = READ8(cpu->ram, operand);
+            value_to_increment++;
+            WRITE8(cpu->ram, operand, value_to_increment);
+            FIXFLAGS(value_to_increment, cpu->registers.status);
             increamentPC+=3;
             break;
         case 0xF0:;
