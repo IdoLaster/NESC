@@ -134,6 +134,13 @@ int cpu_step(CPU *cpu){
             }
             increamentPC+=2;
             break;
+        case 0x11:;
+            // ORA - Ors the opearnd with a.
+            // Addressing Mode: Indirect-Y.
+            value = READ8_INDIRECT_Y(cpu->ram, cpu->registers.pc+1, cpu->registers.y);
+            cpu->registers.a |= value;
+            FIXFLAGS(cpu->registers.a, cpu->registers.status);
+            increamentPC+=2;
             break;
         case 0x0C:;
             // NOP - No OPeration, doing nothing.
@@ -321,6 +328,14 @@ int cpu_step(CPU *cpu){
             }
             increamentPC+=2;
             break;
+        case 0x31:;
+            // AND - Performs a logical AND with the A register and given operand.
+            // Addressing Mode: Indirect Y.
+            value = READ8_INDIRECT_Y(cpu->ram, cpu->registers.pc+1, cpu->registers.y);
+            cpu->registers.a &= value;
+            FIXFLAGS(cpu->registers.a, cpu->registers.status);
+            increamentPC+=2;
+            break;
         case 0x38:;
             //SEC - SEt carry, setting the carry flag enable.
             cpu->registers.status = cpu->registers.status | 0b1;
@@ -439,6 +454,14 @@ int cpu_step(CPU *cpu){
             if(!OVERFLOWSET(cpu->registers.status)){
                 increamentPC+=operand;
             }
+            increamentPC+=2;
+            break;
+        case 0x51:;
+            // EOR - Performs a xor with the A register and given operand.
+            // Addressing Mode: Indirect Y.
+            value = READ8_INDIRECT_Y(cpu->ram, cpu->registers.pc + 1, cpu->registers.y);
+            cpu->registers.a ^= value;
+            FIXFLAGS(cpu->registers.a, cpu->registers.status);
             increamentPC+=2;
             break;
         case 0x60:;
@@ -605,6 +628,26 @@ int cpu_step(CPU *cpu){
             }
             increamentPC+=2;
             break;
+        case 0x71:;
+            // ADC - Add with carry.
+            // Addressing mode: Indirect Y.
+            operand = READ8_INDIRECT_Y(cpu->ram, cpu->registers.pc+1, cpu->registers.y);
+            sum = cpu->registers.a + operand + CARRYSET(cpu->registers.status);
+            overflow = (cpu->registers.a ^ sum) & (operand ^ sum) & 0x80;
+            if(overflow){
+                SETOVERFLOW(cpu->registers.status);
+            }else{
+                CLEAROVERFLOW(cpu->registers.status);
+            }
+            if(sum > 255){
+                SETCARRY(cpu->registers.status);
+            }else{
+                CLEARCARRY(cpu->registers.status);
+            }
+            cpu->registers.a = sum & 0xFF;
+            FIXFLAGS(cpu->registers.a, cpu->registers.status);
+            increamentPC+=2;
+            break;
         case 0x78:;
             // SEI - Set intrerrupt Disable.
             SETINTERRUPTDISABLE(cpu->registers.status);
@@ -679,6 +722,12 @@ int cpu_step(CPU *cpu){
             }
             increamentPC+= 2;
             break;
+        case 0x91:;
+            // STA - Store A register at given memory location.
+            // Addressing Mode: Indirect,X.
+            WRITE8_INDIRECT_Y(cpu->ram, cpu->registers.pc + 1, cpu->registers.y, cpu->registers.a);
+            increamentPC+=2;
+            break;
         case 0x98:;
             // TYA - Transfer Y register to A register.
             cpu->registers.a = cpu->registers.y;
@@ -723,7 +772,6 @@ int cpu_step(CPU *cpu){
             cpu->registers.y = value;
             FIXFLAGS(cpu->registers.y, cpu->registers.status);
             increamentPC+=2;
-            break;
             break;
         case 0xA5:;
             // LDA - Loads a value to A register from memory.
@@ -799,6 +847,14 @@ int cpu_step(CPU *cpu){
                 printf("BRANCHING(0x%x)\n", operand);
             }
             increamentPC+= 2;
+            break;
+        case 0xB1:;
+            // LDA - Loads a value to A.
+            // Addressing Mode: (Indirect,Y).
+            value = READ8_INDIRECT_Y(cpu->ram, cpu->registers.pc+1, cpu->registers.y);
+            cpu->registers.a = value;
+            FIXFLAGS(cpu->registers.a, cpu->registers.status);
+            increamentPC+=2;
             break;
         case 0xB8:;
             // CLV - Clear overflow flag.
@@ -974,6 +1030,23 @@ int cpu_step(CPU *cpu){
                 printf("BRANCHING(0x%x)\n", operand);
             }
             increamentPC += 2;
+            break;
+        case 0xD1:;
+            // CMP - Compares the contents of the a register with the operand and turns on/off flags accordingly
+            // Addressing mode Indirect Y.
+            operand = READ8_INDIRECT_Y(cpu->ram, cpu->registers.pc+1, cpu->registers.y);
+            if(cpu->registers.a >= operand){
+                SETCARRY(cpu->registers.status);
+            }else{
+                CLEARCARRY(cpu->registers.status);
+            }
+            if(cpu->registers.a == operand){
+                SETZERO(cpu->registers.status);
+            }else{
+                CLEARZERO(cpu->registers.status);
+            }
+            FIXNEGATIVE(cpu->registers.a - operand, cpu->registers.status);
+            increamentPC+=2;
             break;
         case 0xD8:;
             // CLD - Clear decimal mode.
@@ -1152,6 +1225,26 @@ int cpu_step(CPU *cpu){
                 printf("BRANCHING(0x%x)\n", operand);
             }
             increamentPC+= 2;
+            break;
+        case 0xF1:;
+            // SBC - Substract with carry.
+            // Addressing Mode: Indirect Y.
+            operand = READ8_INDIRECT_Y(cpu->ram, cpu->registers.pc+1, cpu->registers.y) ^ 0xFF;
+            sum = cpu->registers.a + operand + CARRYSET(cpu->registers.status);
+            overflow = (cpu->registers.a ^ sum) & (operand ^ sum) & 0x80;
+            if(overflow){
+                SETOVERFLOW(cpu->registers.status);
+            }else{
+                CLEAROVERFLOW(cpu->registers.status);
+            }
+            if(sum > 255){
+                SETCARRY(cpu->registers.status);
+            }else{
+                CLEARCARRY(cpu->registers.status);
+            }
+            cpu->registers.a = sum & 0xFF;
+            FIXFLAGS(cpu->registers.a, cpu->registers.status);
+            increamentPC+=2;
             break;
         case 0xF8:;
             // SED - Set Decimal flag.
