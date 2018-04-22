@@ -193,6 +193,30 @@ int cpu_step(CPU *cpu){
             FIXFLAGS(cpu->registers.a, cpu->registers.status);
             increamentPC+=3;
             break;
+        case 0x1D:;
+            // ORA - Ors the opearnd with a.
+            // Addressing Mode: Abs X.
+            operand = READ16(cpu->ram, cpu->registers.pc+1);
+            value = READ8_ABS_X(cpu->ram, operand, cpu->registers.x);
+            cpu->registers.a |= value;
+            FIXFLAGS(cpu->registers.a, cpu->registers.status);
+            increamentPC+=3;
+            break;
+        case 0x1E:;
+            // ASL - Arithmetic Shift Left. Shifts one bit to the left.
+            // Addressing Mode: Abs X.
+            operand = READ16(cpu->ram, cpu->registers.pc+1);
+            value_to_shift = READ8_ABS_X(cpu->ram, operand, cpu->registers.x);
+            if(CHECK_BIT(value_to_shift,7)){
+                SETCARRY(cpu->registers.status);
+            }else{
+                CLEARCARRY(cpu->registers.status);
+            }
+            value_to_shift = value_to_shift << 1;
+            WRITE8_ABS_X(cpu->ram, operand,cpu->registers.x, value_to_shift);
+            FIXFLAGS(value_to_shift, cpu->registers.status);
+            increamentPC+=3;
+            break;
         case 0x20:;
             // JSR stands for Jump to Subroutine;
             // Pushs the pc+3 to the stack and then jumping to the given operand.
@@ -413,6 +437,36 @@ int cpu_step(CPU *cpu){
             FIXFLAGS(cpu->registers.a, cpu->registers.status);
             increamentPC+=3;
             break;
+        case 0x3D:;
+            // AND - Preforms a bitwise AND with a and the operand
+            // Addressing mode: Abs X.
+            operand = READ16(cpu->ram,cpu->registers.pc+1);
+            value = READ8_ABS_X(cpu->ram, operand, cpu->registers.x);
+            cpu->registers.a &= value;
+            FIXFLAGS(cpu->registers.a, cpu->registers.status);
+            increamentPC+=3;
+            break;
+        case 0x3E:;
+            // ROL - Rotate right, shifts every bit one right and put carry as the 0th bit.
+            // Addressing Mode: Abs x.
+            bit_zero = CARRYSET(cpu->registers.status);
+            operand = READ16(cpu->ram, cpu->registers.pc+1);
+            value_to_shift = READ8_ABS_X(cpu->ram, operand, cpu->registers.x);
+            if(CHECK_BIT(value_to_shift, 7)){
+                SETCARRY(cpu->registers.status);
+            }else{
+                CLEARCARRY(cpu->registers.status);
+            }
+            value_to_shift = value_to_shift << 1;
+            if(bit_zero){
+                SET_BIT(value_to_shift, 0);
+            }else{
+                CLEAR_BIT(value_to_shift, 0);
+            }
+            WRITE8_ABS_X(cpu->ram, operand,cpu->registers.x, value_to_shift);
+            FIXFLAGS(value_to_shift, cpu->registers.status);
+            increamentPC+=3;
+            break;
         case 0x40:;
             // RTI - Return from Interrupt.
             // Pulling the status flag from the stack as well as the pc.
@@ -567,6 +621,30 @@ int cpu_step(CPU *cpu){
             value = READ8_ABS_Y(cpu->ram, operand, cpu->registers.y);
             cpu->registers.a ^= value;
             FIXFLAGS(cpu->registers.a, cpu->registers.status);
+            increamentPC+=3;
+            break;
+        case 0x5D:;
+            // EOR - Exclusive or with A and the operand.
+            // Addressing mode: Abs X.
+            operand = READ16(cpu->ram, cpu->registers.pc+1);
+            value = READ8_ABS_X(cpu->ram, operand, cpu->registers.x);
+            cpu->registers.a ^= value;
+            FIXFLAGS(cpu->registers.a, cpu->registers.status);
+            increamentPC+=3;
+            break;
+        case 0x5E:;
+            // LSR - Logical Shift Right. Shifts one bit to the right.
+            // Addressing Mode: Abs X.
+            operand = READ16(cpu->ram, cpu->registers.pc + 1);
+            value = READ8_ABS_X(cpu->ram, operand, cpu->registers.x);
+            if(CHECK_BIT(value,0)){
+                SETCARRY(cpu->registers.status);
+            }else{
+                CLEARCARRY(cpu->registers.status);
+            }
+            value = value >> 1;
+            WRITE8_ABS_X(cpu->ram, operand,cpu->registers.x, value);
+            FIXFLAGS(value, cpu->registers.status);
             increamentPC+=3;
             break;
         case 0x60:;
@@ -825,6 +903,48 @@ int cpu_step(CPU *cpu){
             FIXFLAGS(cpu->registers.a, cpu->registers.status);
             increamentPC+=3;
             break;
+        case 0x7D:;
+            // ADC - Add with carry
+            // Addressing mode: Zero-Page.
+            operand = READ16(cpu->ram, cpu->registers.pc+1);
+            value = READ8_ABS_X(cpu->ram, operand, cpu->registers.x);
+            sum = cpu->registers.a + value + CARRYSET(cpu->registers.status);
+            overflow = (cpu->registers.a ^ sum) & (value ^ sum) & 0x80;
+            if(overflow){
+                SETOVERFLOW(cpu->registers.status);
+            }else{
+                CLEAROVERFLOW(cpu->registers.status);
+            }
+            if(sum > 255){
+                SETCARRY(cpu->registers.status);
+            }else{
+                CLEARCARRY(cpu->registers.status);
+            }
+            cpu->registers.a = sum & 0xFF;
+            FIXFLAGS(cpu->registers.a, cpu->registers.status);
+            increamentPC+=3;
+            break;
+        case 0x7E:;
+            // ROR - Rotate right, shifts every bit one right and put carry as the 7th bit.
+            // Addressing Mode: Abs X.
+            bit_seven = CARRYSET(cpu->registers.status);
+            operand = READ16(cpu->ram, cpu->registers.pc + 1);
+            value_to_shift = READ8_ABS_X(cpu->ram, operand, cpu->registers.x);
+            if(CHECK_BIT(value_to_shift, 0)){
+                SETCARRY(cpu->registers.status);
+            }else{
+                CLEARCARRY(cpu->registers.status);
+            }
+            value_to_shift = value_to_shift >> 1;
+            if(bit_seven){
+                SET_BIT(value_to_shift, 7);
+            }else{
+                CLEAR_BIT(value_to_shift, 7);
+            }
+            WRITE8_ABS_X(cpu->ram, operand, cpu->registers.x,value_to_shift);
+            FIXFLAGS(value_to_shift, cpu->registers.status);
+            increamentPC+=3;
+            break;
         case 0x81:;
             // STA - Store A register at given memory location.
             // Addressing Mode: Indirect,X.
@@ -914,6 +1034,13 @@ int cpu_step(CPU *cpu){
             WRITE8_ZP_X(cpu->ram, operand,cpu->registers.x, cpu->registers.a);
             increamentPC+=2;
             break;
+        case 0x96:;
+            // STX - Stores the X register to given address.
+            // Addressing mode: Zero Page Y.
+            operand = READ8(cpu->ram, cpu->registers.pc + 1);
+            WRITE8_ZP_Y(cpu->ram, operand,cpu->registers.y,cpu->registers.x);
+            increamentPC+=2;
+            break;
         case 0x98:;
             // TYA - Transfer Y register to A register.
             cpu->registers.a = cpu->registers.y;
@@ -931,6 +1058,13 @@ int cpu_step(CPU *cpu){
             // TXS - Transer X to stack pointer.
             cpu->registers.sp = cpu->registers.x;
             increamentPC++;
+            break;
+        case 0x9D:;
+            // STA - Stores the a register at a given address.
+            // Addressing mode: Abs X.
+            operand = READ16(cpu->ram, cpu->registers.pc+1);
+            WRITE8_ABS_X(cpu->ram, operand,cpu->registers.x, cpu->registers.a);
+            increamentPC+=3;
             break;
         case 0xA0:;
             // LDY - Loads a value to Y
@@ -1067,6 +1201,15 @@ int cpu_step(CPU *cpu){
             FIXFLAGS(cpu->registers.a, cpu->registers.status);
             increamentPC+=2;
             break;
+        case 0xB6:;
+            // LDX - Load a value to x.
+            // Addressing mode: Zero-Page Y.
+            operand = READ8(cpu->ram, cpu->registers.pc+1);
+            value = READ8_ZP_Y(cpu->ram, operand, cpu->registers.y);
+            cpu->registers.x = value;
+            FIXFLAGS(cpu->registers.x, cpu->registers.status);
+            increamentPC+=2;
+            break;
         case 0xB8:;
             // CLV - Clear overflow flag.
             CLEAROVERFLOW(cpu->registers.status);
@@ -1086,6 +1229,24 @@ int cpu_step(CPU *cpu){
             cpu->registers.x = cpu->registers.sp;
             FIXFLAGS(cpu->registers.x, cpu->registers.status);
             increamentPC++;
+            break;
+        case 0xBC:;
+            // LDY - Loads a value to Y
+            // Addressing mode: Abs X.
+            operand = READ16(cpu->ram, cpu->registers.pc + 1);
+            value = READ8_ABS_X(cpu->ram, operand, cpu->registers.x);
+            cpu->registers.y = value;
+            FIXFLAGS(cpu->registers.y, cpu->registers.status);
+            increamentPC+=3;
+            break;
+        case 0xBD:;
+            // LDA - Loads a value to A register from memory.
+            // Addressing Mode: Abs x.
+            operand = READ16(cpu->ram, cpu->registers.pc+1);
+            value = READ8_ABS_X(cpu->ram, operand, cpu->registers.x);
+            cpu->registers.a = value;
+            FIXFLAGS(cpu->registers.a, cpu->registers.status);
+            increamentPC+=3;
             break;
         case 0xC0:;
             // CPY - Compare with Y, this one is
@@ -1317,6 +1478,32 @@ int cpu_step(CPU *cpu){
                 CLEARZERO(cpu->registers.status);
             }
             FIXNEGATIVE(cpu->registers.a - value, cpu->registers.status);
+            increamentPC+=3;
+            break;
+        case 0xDD:;
+            operand = READ16(cpu->ram, cpu->registers.pc+1);
+            value = READ8_ABS_X(cpu->ram, operand, cpu->registers.x);
+            if(cpu->registers.a >= value){
+                SETCARRY(cpu->registers.status);
+            }else{
+                CLEARCARRY(cpu->registers.status);
+            }
+            if(cpu->registers.a == value){
+                SETZERO(cpu->registers.status);
+            }else{
+                CLEARZERO(cpu->registers.status);
+            }
+            FIXNEGATIVE(cpu->registers.a - value, cpu->registers.status);
+            increamentPC+=3;
+            break;
+        case 0xDE:;
+            // Dec - Decrease a memory value by 1.
+            // Addressing Mode: Abs X.
+            operand = READ16(cpu->ram, cpu->registers.pc + 1);
+            value_to_decrease = READ8_ABS_X(cpu->ram, operand, cpu->registers.x);
+            value_to_decrease--;
+            WRITE8_ABS_X(cpu->ram, operand,cpu->registers.x, value_to_decrease);
+            FIXFLAGS(value_to_decrease, cpu->registers.status);
             increamentPC+=3;
             break;
         case 0xE0:;
@@ -1567,6 +1754,37 @@ int cpu_step(CPU *cpu){
             }
             cpu->registers.a = sum & 0xFF;
             FIXFLAGS(cpu->registers.a, cpu->registers.status);
+            increamentPC+=3;
+            break;
+        case 0xFD:;
+            // SBC - Substract with carry.
+            // Addressing Mode: Abs X.
+            operand = READ16(cpu->ram, cpu->registers.pc+1);
+            value = READ8_ABS_X(cpu->ram, operand, cpu->registers.x) ^ 0xFF;
+            sum = cpu->registers.a + value + CARRYSET(cpu->registers.status);
+            overflow = (cpu->registers.a ^ sum) & (value ^ sum) & 0x80;
+            if(overflow){
+                SETOVERFLOW(cpu->registers.status);
+            }else{
+                CLEAROVERFLOW(cpu->registers.status);
+            }
+            if(sum > 255){
+                SETCARRY(cpu->registers.status);
+            }else{
+                CLEARCARRY(cpu->registers.status);
+            }
+            cpu->registers.a = sum & 0xFF;
+            FIXFLAGS(cpu->registers.a, cpu->registers.status);
+            increamentPC+=3;
+            break;
+        case 0xFE:;
+            // INC - Increase a memory value by 1.
+            // Addressing Mode: Zero-Page.
+            operand = READ16(cpu->ram, cpu->registers.pc + 1);
+            value_to_increment = READ8_ABS_X(cpu->ram, operand, cpu->registers.x);
+            value_to_increment++;
+            WRITE8_ABS_X(cpu->ram, operand, cpu->registers.x,value_to_increment);
+            FIXFLAGS(value_to_increment, cpu->registers.status);
             increamentPC+=3;
             break;
         default:
