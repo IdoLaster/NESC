@@ -164,6 +164,21 @@ int cpu_step(CPU *cpu){
             FIXFLAGS(cpu->registers.a, cpu->registers.status);
             increamentPC+=2;
             break;
+        case 0x16:;
+            // ASL - Arithmetic Shift Left. Shifts one bit to the left.
+            // Addressing Mode: Zero-Page.
+            operand = READ8(cpu->ram, cpu->registers.pc+1);
+            value_to_shift = READ8_ZP_X(cpu->ram, operand,cpu->registers.x);
+            if(CHECK_BIT(value_to_shift,7)){
+                SETCARRY(cpu->registers.status);
+            }else{
+                CLEARCARRY(cpu->registers.status);
+            }
+            value_to_shift = value_to_shift << 1;
+            WRITE8_ZP_X(cpu->ram, operand,cpu->registers.x ,value_to_shift);
+            FIXFLAGS(value_to_shift, cpu->registers.status);
+            increamentPC+=2;
+            break;
         case 0x18:;
             // CLC - Clear carry flag.
             cpu->registers.status = cpu->registers.status & 0b11111110;
@@ -363,6 +378,27 @@ int cpu_step(CPU *cpu){
             FIXFLAGS(cpu->registers.a, cpu->registers.status);
             increamentPC+=2;
             break;
+        case 0x36:;
+            // ROL - Rotate right, shifts every bit one right and put carry as the 0th bit.
+            // Addressing Mode: Zero-Page X.
+            bit_zero = CARRYSET(cpu->registers.status);
+            operand = READ8(cpu->ram, cpu->registers.pc+1);
+            value_to_shift = READ8_ZP_X(cpu->ram, operand, cpu->registers.x);
+            if(CHECK_BIT(value_to_shift, 7)){
+                SETCARRY(cpu->registers.status);
+            }else{
+                CLEARCARRY(cpu->registers.status);
+            }
+            value_to_shift = value_to_shift << 1;
+            if(bit_zero){
+                SET_BIT(value_to_shift, 0);
+            }else{
+                CLEAR_BIT(value_to_shift, 0);
+            }
+            WRITE8_ZP_X(cpu->ram, operand,cpu->registers.x, value_to_shift);
+            FIXFLAGS(value_to_shift, cpu->registers.status);
+            increamentPC+=2;
+            break;
         case 0x38:;
             //SEC - SEt carry, setting the carry flag enable.
             cpu->registers.status = cpu->registers.status | 0b1;
@@ -507,6 +543,21 @@ int cpu_step(CPU *cpu){
             value = READ8_ZP_X(cpu->ram, operand, cpu->registers.x);
             cpu->registers.a ^= value;
             FIXFLAGS(cpu->registers.a, cpu->registers.status);
+            increamentPC+=2;
+            break;
+        case 0x56:;
+            // LSR - Logical Shift Right. Shifts one bit to the right.
+            // Addressing Mode: Zero-Page X.
+            operand = READ8(cpu->ram, cpu->registers.pc + 1);
+            value_to_shift = READ8_ZP_X(cpu->ram, operand, cpu->registers.x);
+            if(CHECK_BIT(value_to_shift,0)){
+                SETCARRY(cpu->registers.status);
+            }else{
+                CLEARCARRY(cpu->registers.status);
+            }
+            value_to_shift = value_to_shift >> 1;
+            WRITE8_ZP_X(cpu->ram, operand,cpu->registers.x,  value_to_shift);
+            FIXFLAGS(value_to_shift, cpu->registers.status);
             increamentPC+=2;
             break;
         case 0x59:;
@@ -727,6 +778,27 @@ int cpu_step(CPU *cpu){
             FIXFLAGS(cpu->registers.a, cpu->registers.status);
             increamentPC+=2;
             break;
+        case 0x76:;
+            // ROR - Rotate right, shifts every bit one right and put carry as the 7th bit.
+            // Addressing Mode: Zero-Page X.
+            bit_seven = CARRYSET(cpu->registers.status);
+            operand = READ8(cpu->ram, cpu->registers.pc + 1);
+            value_to_shift = READ8_ZP_X(cpu->ram, operand, cpu->registers.x);
+            if(CHECK_BIT(value_to_shift, 0)){
+                SETCARRY(cpu->registers.status);
+            }else{
+                CLEARCARRY(cpu->registers.status);
+            }
+            value_to_shift = value_to_shift >> 1;
+            if(bit_seven){
+                SET_BIT(value_to_shift, 7);
+            }else{
+                CLEAR_BIT(value_to_shift, 7);
+            }
+            WRITE8_ZP_X(cpu->ram, operand,cpu->registers.x, value_to_shift);
+            FIXFLAGS(value_to_shift, cpu->registers.status);
+            increamentPC+=2;
+            break;
         case 0x78:;
             // SEI - Set intrerrupt Disable.
             SETINTERRUPTDISABLE(cpu->registers.status);
@@ -835,6 +907,13 @@ int cpu_step(CPU *cpu){
             WRITE8_ZP_X(cpu->ram, operand, cpu->registers.x, cpu->registers.y);
             increamentPC+=2;
             break;
+        case 0x95:;
+            // STA - Stores the a register at a given address.
+            // Addressing mode: Zero-page
+            operand = READ8(cpu->ram, cpu->registers.pc+1);
+            WRITE8_ZP_X(cpu->ram, operand,cpu->registers.x, cpu->registers.a);
+            increamentPC+=2;
+            break;
         case 0x98:;
             // TYA - Transfer Y register to A register.
             cpu->registers.a = cpu->registers.y;
@@ -843,7 +922,7 @@ int cpu_step(CPU *cpu){
             break;
         case 0x99:;
             // STA - Stores the a register at a given address.
-            // Addressing mode: Zero-page
+            // Addressing mode: Abs Y
             operand = READ16(cpu->ram, cpu->registers.pc+1);
             WRITE8_ABS_Y(cpu->ram, operand, cpu->registers.y ,cpu->registers.a);
             increamentPC+=3;
@@ -1207,6 +1286,16 @@ int cpu_step(CPU *cpu){
             FIXNEGATIVE(cpu->registers.a - value, cpu->registers.status);
             increamentPC+=2;
             break;
+        case 0xD6:;
+            // Dec - Decrease a memory value by 1.
+            // Addressing Mode: Zero-Page X.
+            operand = READ8(cpu->ram, cpu->registers.pc + 1);
+            value_to_decrease = READ8_ZP_X(cpu->ram, operand, cpu->registers.x);
+            value_to_decrease--;
+            WRITE8_ZP_X(cpu->ram, operand,cpu->registers.x, value_to_decrease);
+            FIXFLAGS(value_to_decrease, cpu->registers.status);
+            increamentPC+=2;
+            break;
         case 0xD8:;
             // CLD - Clear decimal mode.
             CLEARDECIMALMODE(cpu->registers.status);
@@ -1442,6 +1531,16 @@ int cpu_step(CPU *cpu){
             }
             cpu->registers.a = sum & 0xFF;
             FIXFLAGS(cpu->registers.a, cpu->registers.status);
+            increamentPC+=2;
+            break;
+        case 0xF6:;
+            // INC - Increase a memory value by 1.
+            // Addressing Mode: Zero-Page X.
+            operand = READ8(cpu->ram, cpu->registers.pc + 1);
+            value_to_increment = READ8_ZP_X(cpu->ram, operand,cpu->registers.x);
+            value_to_increment++;
+            WRITE8_ZP_X(cpu->ram, operand,cpu->registers.x, value_to_increment);
+            FIXFLAGS(value_to_increment, cpu->registers.status);
             increamentPC+=2;
             break;
         case 0xF8:;
