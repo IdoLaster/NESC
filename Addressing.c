@@ -92,3 +92,23 @@ uint16_t INDIRECT_JMP(RAM *ram, uint16_t addr){
     uint16_t address = (higher << 8) | (lower & 0xff);
     return address;
 }
+
+uint8_t READ8_ABS_X(RAM *ram, uint16_t addr, uint8_t x){
+    return READ8(ram, addr + x);
+}
+
+uint8_t READ8_ABS_Y(RAM *ram, uint16_t addr, uint8_t y){
+    return READ8(ram, addr + y);
+}
+
+void WRITE8_ABS_Y(RAM *ram, uint16_t addr, uint8_t y, uint8_t value){
+    ram->memory[addr + y] = value;
+}
+
+uint8_t READ8_ZP_X(RAM *ram, uint8_t addr, uint8_t x){
+    return READ8_ZP(ram, addr + x);
+}
+
+void WRITE8_ZP_X(RAM *ram, uint8_t addr, uint8_t x, uint8_t value){
+    WRITE8_ZP(ram, addr+x,value);
+}
