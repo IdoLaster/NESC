@@ -57,6 +57,11 @@ int cpu_step(CPU *cpu){
             FIXFLAGS(cpu->registers.a, cpu->registers.status);
             increamentPC+=2;
             break;
+        case 0x04:;
+            // NOP - no operation
+            // Addressing Mode: Zero-Page.
+            increamentPC+=2;
+            break;
         case 0x05:;
             // ORA - Ors the opearnd with a.
             // Addressing Mode: Zero-Page.
@@ -127,7 +132,8 @@ int cpu_step(CPU *cpu){
             break;
         case 0x0C:;
             // NOP - No OPeration, doing nothing.
-            increamentPC++;
+            // Addressing Mode: Abs.
+            increamentPC+=3;
             break;
         case 0x0D:;
             // ORA - Ors the opearnd with a.
@@ -153,6 +159,11 @@ int cpu_step(CPU *cpu){
             value = READ8_INDIRECT_Y(cpu->ram, cpu->registers.pc+1, cpu->registers.y);
             cpu->registers.a |= value;
             FIXFLAGS(cpu->registers.a, cpu->registers.status);
+            increamentPC+=2;
+            break;
+        case 0x14:;
+            // Nop - No operation.
+            // Addressing Mode: ZP X.
             increamentPC+=2;
             break;
         case 0x15:;
@@ -192,6 +203,10 @@ int cpu_step(CPU *cpu){
             cpu->registers.a |= value;
             FIXFLAGS(cpu->registers.a, cpu->registers.status);
             increamentPC+=3;
+            break;
+        case 0x1A:;
+            // NOP - No operation.
+            increamentPC+=1;
             break;
         case 0x1D:;
             // ORA - Ors the opearnd with a.
@@ -393,6 +408,11 @@ int cpu_step(CPU *cpu){
             FIXFLAGS(cpu->registers.a, cpu->registers.status);
             increamentPC+=2;
             break;
+        case 0x34:;
+            // Nop - No operation.
+            // Addressing Mode: ZP X.
+            increamentPC+=2;
+            break;
         case 0x35:;
             // AND - Preforms a bitwise AND with a and the operand
             // Addressing mode: Zero-Page.
@@ -436,6 +456,10 @@ int cpu_step(CPU *cpu){
             cpu->registers.a &= value;
             FIXFLAGS(cpu->registers.a, cpu->registers.status);
             increamentPC+=3;
+            break;
+        case 0x3A:;
+            // NOP - No operation.
+            increamentPC+=1;
             break;
         case 0x3D:;
             // AND - Preforms a bitwise AND with a and the operand
@@ -491,6 +515,11 @@ int cpu_step(CPU *cpu){
             value = READ8_INDIRECT_X(cpu->ram, cpu->registers.pc + 1, cpu->registers.x);
             cpu->registers.a ^= value;
             FIXFLAGS(cpu->registers.a, cpu->registers.status);
+            increamentPC+=2;
+            break;
+        case 0x44:;
+            // NOP - No Operation.
+            // Addressing Mode: Zero-Page.
             increamentPC+=2;
             break;
         case 0x45:;
@@ -590,6 +619,11 @@ int cpu_step(CPU *cpu){
             FIXFLAGS(cpu->registers.a, cpu->registers.status);
             increamentPC+=2;
             break;
+        case 0x54:;
+            // Nop - No operation.
+            // Addressing Mode: ZP X.
+            increamentPC+=2;
+            break;
         case 0x55:;
             // EOR - Exclusive or with A and the operand.
             // Addressing mode: Zero-Page X.
@@ -622,6 +656,10 @@ int cpu_step(CPU *cpu){
             cpu->registers.a ^= value;
             FIXFLAGS(cpu->registers.a, cpu->registers.status);
             increamentPC+=3;
+            break;
+        case 0x5A:;
+            // NOP - No operation.
+            increamentPC+=1;
             break;
         case 0x5D:;
             // EOR - Exclusive or with A and the operand.
@@ -671,6 +709,11 @@ int cpu_step(CPU *cpu){
             }
             cpu->registers.a = sum & 0xFF;
             FIXFLAGS(cpu->registers.a, cpu->registers.status);
+            increamentPC+=2;
+            break;
+        case 0x64:;
+            // NOP - No Operation.
+            // Addressing Mode: Zero-Page.
             increamentPC+=2;
             break;
         case 0x65:;
@@ -835,6 +878,11 @@ int cpu_step(CPU *cpu){
             FIXFLAGS(cpu->registers.a, cpu->registers.status);
             increamentPC+=2;
             break;
+        case 0x74:;
+            // Nop - No operation.
+            // Addressing Mode: ZP X.
+            increamentPC+=2;
+            break;
         case 0x75:;
             // ADC - Add with carry
             // Addressing mode: Zero-Page.
@@ -903,6 +951,10 @@ int cpu_step(CPU *cpu){
             FIXFLAGS(cpu->registers.a, cpu->registers.status);
             increamentPC+=3;
             break;
+        case 0x7A:;
+            // NOP - No operation.
+            increamentPC+=1;
+            break;
         case 0x7D:;
             // ADC - Add with carry
             // Addressing mode: Zero-Page.
@@ -944,6 +996,10 @@ int cpu_step(CPU *cpu){
             WRITE8_ABS_X(cpu->ram, operand, cpu->registers.x,value_to_shift);
             FIXFLAGS(value_to_shift, cpu->registers.status);
             increamentPC+=3;
+            break;
+        case 0x80:;
+            // NOP - No operation.
+            increamentPC+=2;
             break;
         case 0x81:;
             // STA - Store A register at given memory location.
@@ -1248,6 +1304,15 @@ int cpu_step(CPU *cpu){
             FIXFLAGS(cpu->registers.a, cpu->registers.status);
             increamentPC+=3;
             break;
+        case 0xBE:;
+            // LDX - Load a value to x.
+            // Addressing mode: Absolute Y.
+            operand = READ16(cpu->ram, cpu->registers.pc+1);
+            value = READ8_ABS_Y(cpu->ram, operand, cpu->registers.y);
+            cpu->registers.x = value;
+            FIXFLAGS(cpu->registers.x, cpu->registers.status);
+            increamentPC+=3;
+            break;
         case 0xC0:;
             // CPY - Compare with Y, this one is
             // Addressing Mode: Immidate.
@@ -1429,6 +1494,11 @@ int cpu_step(CPU *cpu){
             FIXNEGATIVE(cpu->registers.a - operand, cpu->registers.status);
             increamentPC+=2;
             break;
+        case 0xD4:;
+            // Nop - No operation.
+            // Addressing Mode: ZP X.
+            increamentPC+=2;
+            break;
         case 0xD5:;
             // CMP - Compares the contents of the a register with the operand and turns on/off flags accordingly
             // Addressing mode Zero-Page.
@@ -1479,6 +1549,10 @@ int cpu_step(CPU *cpu){
             }
             FIXNEGATIVE(cpu->registers.a - value, cpu->registers.status);
             increamentPC+=3;
+            break;
+        case 0xDA:;
+            // NOP - No operation.
+            increamentPC+=1;
             break;
         case 0xDD:;
             operand = READ16(cpu->ram, cpu->registers.pc+1);
@@ -1699,6 +1773,11 @@ int cpu_step(CPU *cpu){
             FIXFLAGS(cpu->registers.a, cpu->registers.status);
             increamentPC+=2;
             break;
+        case 0xF4:;
+            // Nop - No operation.
+            // Addressing Mode: ZP X.
+            increamentPC+=2;
+            break;
         case 0xF5:;
             // SBC - Substract with carry.
             // Addressing Mode: Zero-Page.
@@ -1755,6 +1834,10 @@ int cpu_step(CPU *cpu){
             cpu->registers.a = sum & 0xFF;
             FIXFLAGS(cpu->registers.a, cpu->registers.status);
             increamentPC+=3;
+            break;
+        case 0xFA:;
+            // NOP - No operation.
+            increamentPC+=1;
             break;
         case 0xFD:;
             // SBC - Substract with carry.
