@@ -147,9 +147,10 @@ int cpu_step(CPU *cpu){
         case 0x10:;
             // BPL - Branch if positive, branching if the negative flag is clear.
             // Addressing mode: Relative.
-            operand = READ8(cpu->ram, cpu->registers.pc+1);
+
             if(!NEGATIVESET(cpu->registers.status)){
-                increamentPC+=operand;
+                int8_t branch_to = READ8(cpu->ram, cpu->registers.pc+1);
+                increamentPC+=branch_to;
             }
             increamentPC+=2;
             break;
@@ -207,6 +208,10 @@ int cpu_step(CPU *cpu){
         case 0x1A:;
             // NOP - No operation.
             increamentPC+=1;
+            break;
+        case 0x1C:;
+            // NOP SKW - Skip 2 instuctions.
+            increamentPC+=3;
             break;
         case 0x1D:;
             // ORA - Ors the opearnd with a.
@@ -394,9 +399,10 @@ int cpu_step(CPU *cpu){
         case 0x30:;
             // BMI - Branch if minues - branchs if the negative flag is set.
             // Addressing mode: Relative
-            operand = READ8(cpu->ram, cpu->registers.pc+1);
+
             if(NEGATIVESET(cpu->registers.status)){
-                increamentPC+=operand;
+                int8_t branch_to = READ8(cpu->ram, cpu->registers.pc+1);
+                increamentPC+=branch_to;
             }
             increamentPC+=2;
             break;
@@ -460,6 +466,10 @@ int cpu_step(CPU *cpu){
         case 0x3A:;
             // NOP - No operation.
             increamentPC+=1;
+            break;
+        case 0x3C:;
+            // NOP SKW - Skip 2 instuctions.
+            increamentPC+=3;
             break;
         case 0x3D:;
             // AND - Preforms a bitwise AND with a and the operand
@@ -605,9 +615,10 @@ int cpu_step(CPU *cpu){
         case 0x50:;
             // BVC - Branch if overflow is clear.
             // Addressing mode: Relative.
-            operand = READ8(cpu->ram, cpu->registers.pc+1);
+
             if(!OVERFLOWSET(cpu->registers.status)){
-                increamentPC+=operand;
+                int8_t branch_to = READ8(cpu->ram, cpu->registers.pc+1);
+                increamentPC+=branch_to;
             }
             increamentPC+=2;
             break;
@@ -660,6 +671,10 @@ int cpu_step(CPU *cpu){
         case 0x5A:;
             // NOP - No operation.
             increamentPC+=1;
+            break;
+        case 0x5C:;
+            // NOP SKW - Skip 2 instuctions.
+            increamentPC+=3;
             break;
         case 0x5D:;
             // EOR - Exclusive or with A and the operand.
@@ -852,9 +867,10 @@ int cpu_step(CPU *cpu){
         case 0x70:;
             // BVS - Branch if overflow is set
             // Addressing mode: Relative.
-            operand = READ8(cpu->ram, cpu->registers.pc+1);
+
             if(OVERFLOWSET(cpu->registers.status)){
-                increamentPC+=operand;
+                int8_t branch_to = READ8(cpu->ram, cpu->registers.pc+1);
+                increamentPC+=branch_to;
             }
             increamentPC+=2;
             break;
@@ -955,6 +971,10 @@ int cpu_step(CPU *cpu){
             // NOP - No operation.
             increamentPC+=1;
             break;
+        case 0x7C:;
+            // NOP SKW - Skip 2 instuctions.
+            increamentPC+=3;
+            break;
         case 0x7D:;
             // ADC - Add with carry
             // Addressing mode: Zero-Page.
@@ -1007,6 +1027,13 @@ int cpu_step(CPU *cpu){
             WRITE8_INDIRECT_X(cpu->ram, cpu->registers.pc + 1, cpu->registers.x, cpu->registers.a);
             increamentPC+=2;
             break;
+        case 0x83:;
+            // AAX/SAX - And A with X and write result to memory.
+            // Addressing Mode: Indirect X.
+            value = cpu->registers.a & cpu->registers.x;
+            WRITE8_INDIRECT_X(cpu->ram, cpu->registers.pc+1, cpu->registers.x, value);
+            increamentPC+=2;
+            break;
         case 0x84:;
             // STY - Store Y value to memory.
             // Addressing Mode: Zero-Page.
@@ -1026,6 +1053,14 @@ int cpu_step(CPU *cpu){
             // Addressing mode: Zero Page.
             operand = READ8(cpu->ram, cpu->registers.pc + 1);
             WRITE8_ZP(cpu->ram, operand,cpu->registers.x);
+            increamentPC+=2;
+            break;
+        case 0x87:;
+            // AAX/SAX - And A with X and write result to memory.
+            // Addressing Mode: Zero-Page.
+            operand = READ8(cpu->ram, cpu->registers.pc+1);
+            value = cpu->registers.a & cpu->registers.x;
+            WRITE8_ZP(cpu->ram, operand, value);
             increamentPC+=2;
             break;
         case 0x88:;
@@ -1061,11 +1096,20 @@ int cpu_step(CPU *cpu){
             WRITE8(cpu->ram, operand, cpu->registers.x);
             increamentPC+=3;
             break;
+        case 0x8F:;
+            // AAX/SAX - And A with X and write result to memory.
+            // Addressing Mode: Abs.
+            operand = READ16(cpu->ram, cpu->registers.pc+1);
+            value = cpu->registers.a & cpu->registers.x;
+            WRITE8(cpu->ram, operand, value);
+            increamentPC+=3;
+            break;
         case 0x90:;
             // BCC - Branch if carry
-            operand = READ8_ABS(cpu->ram, cpu->registers.pc + 1);
+
             if(!(cpu->registers.status & 0b1)){
-                increamentPC += operand;
+                int8_t branch_to = READ8_ABS(cpu->ram, cpu->registers.pc + 1);
+                increamentPC += branch_to;
                 printf("BRANCHING(0x%x)\n", operand);
             }
             increamentPC+= 2;
@@ -1095,6 +1139,14 @@ int cpu_step(CPU *cpu){
             // Addressing mode: Zero Page Y.
             operand = READ8(cpu->ram, cpu->registers.pc + 1);
             WRITE8_ZP_Y(cpu->ram, operand,cpu->registers.y,cpu->registers.x);
+            increamentPC+=2;
+            break;
+        case 0x97:;
+            // AAX/SAX - And A with X and write result to memory.
+            // Addressing Mode: Zero-Page.
+            operand = READ8(cpu->ram, cpu->registers.pc+1);
+            value = cpu->registers.a & cpu->registers.x;
+            WRITE8_ZP_Y(cpu->ram, operand,cpu->registers.y, value);
             increamentPC+=2;
             break;
         case 0x98:;
@@ -1147,6 +1199,15 @@ int cpu_step(CPU *cpu){
             cpu->registers.x = operand;
             increamentPC+=2;
             break;
+        case 0xA3:;
+            // LAX - Load A and X register from memory.
+            // Addressing Mode: Indirect X.
+            value = READ8_INDIRECT_X(cpu->ram, cpu->registers.pc+1, cpu->registers.x);
+            cpu->registers.x = value;
+            cpu->registers.a = value;
+            FIXFLAGS(value, cpu->registers.status);
+            increamentPC+=2;
+            break;
         case 0xA4:;
             // LDY - Loads a value to Y
             // Addressing mode: Zero-Page.
@@ -1172,6 +1233,16 @@ int cpu_step(CPU *cpu){
             value = READ8_ZP(cpu->ram, operand);
             cpu->registers.x = value;
             FIXFLAGS(cpu->registers.x, cpu->registers.status);
+            increamentPC+=2;
+            break;
+        case 0xA7:;
+            // LAX - Load A and X register from memory.
+            // Addressing Mode: Zero-Page.
+            operand = READ8(cpu->ram, cpu->registers.pc+1);
+            value = READ8_ZP(cpu->ram, operand);
+            cpu->registers.x = value;
+            cpu->registers.a = value;
+            FIXFLAGS(value, cpu->registers.status);
             increamentPC+=2;
             break;
         case 0xA8:;
@@ -1221,12 +1292,23 @@ int cpu_step(CPU *cpu){
             FIXFLAGS(cpu->registers.x, cpu->registers.status);
             increamentPC+=3;
             break;
+        case 0xAF:;
+            // LAX - Load A and X register from memory.
+            // Addressing Mode: Abs.
+            operand = READ16(cpu->ram, cpu->registers.pc+1);
+            value = READ8(cpu->ram, operand);
+            cpu->registers.x = value;
+            cpu->registers.a = value;
+            FIXFLAGS(value, cpu->registers.status);
+            increamentPC+=3;
+            break;
         case 0xB0:;
             // BCS - Branch on Carry Set, it's jumping if the carry is set.
             // Addressing mode: Immediate (I belive).
-            operand = READ8_ABS(cpu->ram, cpu->registers.pc + 1);
+
             if(cpu->registers.status & 0b1){
-                increamentPC += operand;
+                int8_t branch_to = READ8_ABS(cpu->ram, cpu->registers.pc + 1);
+                increamentPC += branch_to;
                 printf("BRANCHING(0x%x)\n", operand);
             }
             increamentPC+= 2;
@@ -1237,6 +1319,15 @@ int cpu_step(CPU *cpu){
             value = READ8_INDIRECT_Y(cpu->ram, cpu->registers.pc+1, cpu->registers.y);
             cpu->registers.a = value;
             FIXFLAGS(cpu->registers.a, cpu->registers.status);
+            increamentPC+=2;
+            break;
+        case 0xB3:;
+            // LAX - Load A and X register from memory.
+            // Addressing Mode: Indirect Y.
+            value = READ8_INDIRECT_Y(cpu->ram, cpu->registers.pc+1, cpu->registers.y);
+            cpu->registers.x = value;
+            cpu->registers.a = value;
+            FIXFLAGS(value, cpu->registers.status);
             increamentPC+=2;
             break;
         case 0xB4:;
@@ -1264,6 +1355,16 @@ int cpu_step(CPU *cpu){
             value = READ8_ZP_Y(cpu->ram, operand, cpu->registers.y);
             cpu->registers.x = value;
             FIXFLAGS(cpu->registers.x, cpu->registers.status);
+            increamentPC+=2;
+            break;
+        case 0xB7:;
+            // LAX - Load A and X register from memory.
+            // Addressing Mode: Zero-Page Y.
+            operand = READ8(cpu->ram, cpu->registers.pc+1);
+            value = READ8_ZP_Y(cpu->ram, operand, cpu->registers.y);
+            cpu->registers.x = value;
+            cpu->registers.a = value;
+            FIXFLAGS(value, cpu->registers.status);
             increamentPC+=2;
             break;
         case 0xB8:;
@@ -1311,6 +1412,16 @@ int cpu_step(CPU *cpu){
             value = READ8_ABS_Y(cpu->ram, operand, cpu->registers.y);
             cpu->registers.x = value;
             FIXFLAGS(cpu->registers.x, cpu->registers.status);
+            increamentPC+=3;
+            break;
+        case 0xBF:;
+            // LAX - Load A and X register from memory.
+            // Addressing Mode: Abs Y.
+            operand = READ16(cpu->ram, cpu->registers.pc+1);
+            value = READ8_ABS_Y(cpu->ram, operand, cpu->registers.y);
+            cpu->registers.x = value;
+            cpu->registers.a = value;
+            FIXFLAGS(value, cpu->registers.status);
             increamentPC+=3;
             break;
         case 0xC0:;
@@ -1471,8 +1582,8 @@ int cpu_step(CPU *cpu){
         case 0xD0:;
             // BNE - Branch if not equal, branchs if the zero flag is clear.
             if(!ZEROSET(cpu->registers.status)){
-                operand = READ8_ABS(cpu->ram, cpu->registers.pc + 1);
-                increamentPC += operand;
+                int8_t branch_to = READ8_ABS(cpu->ram, cpu->registers.pc + 1);
+                increamentPC += branch_to;
                 printf("BRANCHING(0x%x)\n", operand);
             }
             increamentPC += 2;
@@ -1553,6 +1664,10 @@ int cpu_step(CPU *cpu){
         case 0xDA:;
             // NOP - No operation.
             increamentPC+=1;
+            break;
+        case 0xDC:;
+            // NOP SKW - Skip 2 instuctions.
+            increamentPC+=3;
             break;
         case 0xDD:;
             operand = READ16(cpu->ram, cpu->registers.pc+1);
@@ -1694,6 +1809,26 @@ int cpu_step(CPU *cpu){
             // Other NOP instuction, does N-O-T-H-I-N-G.
             increamentPC++;
             break;
+        case 0xEB:;
+            // SBC - Substract with carry.
+            // Addressing Mode: Immediate.
+            operand = READ8(cpu->ram, cpu->registers.pc+1) ^ 0xFF;
+            sum = cpu->registers.a + operand + CARRYSET(cpu->registers.status);
+            overflow = (cpu->registers.a ^ sum) & (operand ^ sum) & 0x80;
+            if(overflow){
+                SETOVERFLOW(cpu->registers.status);
+            }else{
+                CLEAROVERFLOW(cpu->registers.status);
+            }
+            if(sum > 255){
+                SETCARRY(cpu->registers.status);
+            }else{
+                CLEARCARRY(cpu->registers.status);
+            }
+            cpu->registers.a = sum & 0xFF;
+            FIXFLAGS(cpu->registers.a, cpu->registers.status);
+            increamentPC+=2;
+            break;
         case 0xEC:;
             // CPX - Compares the contents of the x register with the operand and turns on/off flags accordingly
             // Addressing mode Abs.
@@ -1746,9 +1881,10 @@ int cpu_step(CPU *cpu){
         case 0xF0:;
             // BEQ - Branch if equal, or if the zero flag is set.
             // Addressing mode: Immediate I think.
-            operand = READ8_ABS(cpu->ram, cpu->registers.pc + 1);
+
             if(cpu->registers.status & 0b10){
-                increamentPC += operand;
+                int8_t branch_to = READ8_ABS(cpu->ram, cpu->registers.pc + 1);
+                increamentPC += branch_to;
                 printf("BRANCHING(0x%x)\n", operand);
             }
             increamentPC+= 2;
@@ -1838,6 +1974,10 @@ int cpu_step(CPU *cpu){
         case 0xFA:;
             // NOP - No operation.
             increamentPC+=1;
+            break;
+        case 0xFC:;
+            // NOP SKW - Skip 2 instuctions.
+            increamentPC+=3;
             break;
         case 0xFD:;
             // SBC - Substract with carry.
